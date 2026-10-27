@@ -40,3 +40,18 @@ from the engine's reported `SessionSnapshot`. Settings persist via `main/setting
 `corepack pnpm --filter @kadr/desktop typecheck` and `test`, then run `corepack pnpm dev:desktop`.
 In dev, renderer warnings and crashes are forwarded to the terminal. Restart `dev:desktop` after
 editing `src/main` or `src/preload` (only renderers hot-reload).
+
+**Dev mode is not the shipped app**: dev pages come from `http://localhost`, packaged ones from
+`kadr://app`. Run `corepack pnpm --filter @kadr/desktop test:e2e` (Playwright against the
+production build, also in CI and before every release) for anything touching IPC, windows,
+permissions or the protocol, and extend `e2e/smoke.e2e.ts` for new window behavior.
+
+## Pitfalls
+
+- Check senders with `isTrustedOrigin` (`src/shared/origin.ts`), never `URL.origin`: Node reports
+  the origin of `kadr:` URLs as `"null"`, which broke every IPC call in v0.1.0.
+- Never call `window.close()` from a page: a page-initiated close destroys the window (the control
+  panel hosts the recording engine). Hide windows through `WindowManager`.
+- Page Visibility doesn't update for hidden overlay windows; the main process signals visibility
+  explicitly (`panel:visibility`, `bubble:visibility`). The bubble holds the camera only while
+  visible.

@@ -1,14 +1,4 @@
-import "@kadr/ui/theme.css";
-import "../styles.css";
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
+import { mount } from "../mount";
 import { BubbleApp } from "./BubbleApp";
 
-const root = document.getElementById("root");
-if (!root) throw new Error("Missing #root");
-
-createRoot(root).render(
-  <StrictMode>
-    <BubbleApp />
-  </StrictMode>,
-);
+mount(<BubbleApp />, "overlay");

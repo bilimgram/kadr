@@ -51,6 +51,10 @@ const api: KadrApi = {
     hide: () => ipcRenderer.send(Channels.panelHide),
     onVisibilityChange: (listener) => subscribe(Channels.panelVisibility, listener),
   },
+  bubble: {
+    isVisible: () => ipcRenderer.invoke(Channels.bubbleVisibilityGet),
+    onVisibilityChange: (listener) => subscribe(Channels.bubbleVisibility, listener),
+  },
   app: {
     quit: () => ipcRenderer.send(Channels.appQuit),
   },

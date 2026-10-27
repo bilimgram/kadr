@@ -48,11 +48,17 @@ export const UpdateSettings = z.object({
   automatic: z.boolean(),
 });
 
+export const SystemSettings = z.object({
+  /** Start Kadr (hidden, in the tray) when the user signs in to the computer. */
+  openAtLogin: z.boolean(),
+});
+
 export const AppSettings = z.object({
   bubble: DesktopBubbleSettings,
   recording: RecordingSettings,
   appearance: AppearanceSettings,
   updates: UpdateSettings,
+  system: SystemSettings,
 });
 
 export const AppSettingsPatch = z.object({
@@ -60,6 +66,7 @@ export const AppSettingsPatch = z.object({
   recording: RecordingSettings.partial().optional(),
   appearance: AppearanceSettings.partial().optional(),
   updates: UpdateSettings.partial().optional(),
+  system: SystemSettings.partial().optional(),
 });
 
 // ---------------------------------------------------------------------------

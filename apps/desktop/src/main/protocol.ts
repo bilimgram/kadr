@@ -1,9 +1,7 @@
 import { isAbsolute, join, normalize, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 import { net, protocol } from "electron";
-
-export const APP_SCHEME = "kadr";
-export const APP_ORIGIN = `${APP_SCHEME}://app`;
+import { APP_HOST, APP_SCHEME } from "../shared/origin";
 
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
@@ -33,7 +31,7 @@ export function registerAppScheme(): void {
 export function serveRenderer(rootDir: string): void {
   protocol.handle(APP_SCHEME, async (request) => {
     const url = new URL(request.url);
-    if (url.host !== "app") return new Response("Not found", { status: 404 });
+    if (url.host !== APP_HOST) return new Response("Not found", { status: 404 });
 
     const filePath = normalize(join(rootDir, decodeURIComponent(url.pathname)));
     const pathFromRoot = relative(rootDir, filePath);

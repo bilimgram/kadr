@@ -64,7 +64,8 @@ Long recordings are limited by your device’s available memory.
 ## Your first desktop recording
 
 1. Open Kadr. A small control panel appears in the top-right corner, and your camera bubble in the
-   bottom-left. Closing the panel keeps Kadr running in the tray (menu bar on macOS).
+   bottom-left. Closing the panel (or pressing <kbd>Esc</kbd>) keeps Kadr running in the tray (menu
+   bar on macOS), and turns the camera off until you open it again.
 2. Choose **Full screen** or **Camera only**, and pick your camera and microphone. The level meter shows
    that your microphone is working.
 3. Press **Start recording**. After a 3-2-1 countdown, recording starts.
@@ -84,7 +85,9 @@ Open **Settings** in the control panel:
   **Mirror camera**.
 - **Countdown** — turn the countdown and its sound on or off.
 - **Audio** — record system audio (sound playing on your computer). Windows only for now.
-- **More** — appearance (light, dark or system), and [updates](#updates).
+- **More** — appearance (light, dark or system), **Open Kadr at login** (Windows and macOS: start
+  quietly in the tray), [updates](#updates), and **Help and feedback** (this guide, reporting a
+  problem with your version prefilled, privacy, source code).
 
 ## Keyboard shortcuts
 

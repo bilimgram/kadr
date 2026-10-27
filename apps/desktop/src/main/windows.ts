@@ -2,8 +2,8 @@ import { join } from "node:path";
 import { getBubbleShape } from "@kadr/compositor/shapes";
 import { app, BrowserWindow, screen, type WebPreferences } from "electron";
 import { type AppSettings, Channels } from "../shared/api";
+import { APP_ORIGIN } from "../shared/origin";
 import { isBubbleShown } from "../shared/settings";
-import { APP_ORIGIN } from "./protocol";
 
 type Page = "control" | "bubble" | "toolbar" | "countdown";
 
@@ -85,7 +85,7 @@ export class WindowManager {
   }
 
   /** The control panel: a compact, frameless card near the top-right corner, like a tray app. */
-  createControl(): BrowserWindow {
+  createControl({ startHidden = false }: { startHidden?: boolean } = {}): BrowserWindow {
     const area = screen.getPrimaryDisplay().workArea;
     const win = new BrowserWindow({
       width: PANEL_WIDTH,
@@ -105,7 +105,9 @@ export class WindowManager {
       // The panel hosts the recording engine, so it must keep running while hidden.
       webPreferences: { ...secureWebPreferences, backgroundThrottling: false },
     });
-    win.once("ready-to-show", () => this.showControl());
+    win.once("ready-to-show", () => {
+      if (!startHidden) this.showControl();
+    });
     win.on("close", (event) => {
       // Closing the panel keeps Kadr running in the tray.
       if (this.quitting) return;
@@ -114,6 +116,7 @@ export class WindowManager {
     });
     win.on("closed", () => {
       this.control = null;
+      this.syncBubble();
     });
     void win.loadURL(pageUrl("control"));
     this.control = win;
@@ -268,6 +271,13 @@ export class WindowManager {
     const shown = isBubbleShown(this.settings) && (this.sessionActive || this.isControlVisible());
     if (shown && !win.isVisible()) win.showInactive();
     if (!shown && win.isVisible()) win.hide();
+    // The bubble starts and stops the camera on this signal.
+    win.webContents.send(Channels.bubbleVisibility, shown);
+  }
+
+  /** Whether the bubble window is on screen. */
+  isBubbleVisible(): boolean {
+    return !!this.bubble && !this.bubble.isDestroyed() && this.bubble.isVisible();
   }
 
   private placeToolbarAboveBubble(win: BrowserWindow): void {

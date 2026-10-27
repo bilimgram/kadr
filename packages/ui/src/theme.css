@@ -529,6 +529,48 @@
 
 /* ---------- Alert ---------- */
 
+/* iOS-style activity indicator: spokes rotated around the centre, fading in sequence. */
+.k-activity {
+  position: relative;
+  display: inline-block;
+  width: var(--k-activity-size);
+  height: var(--k-activity-size);
+  color: currentColor;
+}
+
+.k-activity__spoke {
+  position: absolute;
+  top: 0;
+  left: calc(50% - var(--k-activity-size) * 0.045);
+  width: calc(var(--k-activity-size) * 0.09);
+  height: calc(var(--k-activity-size) * 0.28);
+  border-radius: 999px;
+  background: currentColor;
+  transform-origin: 50% calc(var(--k-activity-size) / 2);
+  animation: k-activity-fade 1s linear infinite;
+}
+
+@keyframes k-activity-fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.15;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .k-activity__spoke {
+    animation-duration: 2.4s;
+  }
+}
+
+.k-error-boundary {
+  padding: 16px;
+  background: var(--k-surface);
+  border-radius: var(--k-radius-lg);
+}
+
 .k-alert {
   display: flex;
   align-items: flex-start;

@@ -62,6 +62,8 @@ export const Channels = {
   panelResize: "panel:resize",
   panelHide: "panel:hide",
   panelVisibility: "panel:visibility",
+  bubbleVisibilityGet: "bubble:visibility:get",
+  bubbleVisibility: "bubble:visibility",
   appQuit: "app:quit",
   updatesGet: "updates:get",
   updatesCheck: "updates:check",
@@ -131,6 +133,12 @@ export interface KadrApi {
     /** Hide the panel; the app keeps running in the tray. */
     hide(): void;
     /** Panel shown/hidden (Page Visibility can't tell: the panel never throttles). */
+    onVisibilityChange(listener: (visible: boolean) => void): () => void;
+  };
+  readonly bubble: {
+    /** Whether the bubble window is on screen; it holds the camera only while it is. */
+    isVisible(): Promise<boolean>;
+    /** Bubble shown/hidden (Page Visibility doesn't update for hidden overlay windows). */
     onVisibilityChange(listener: (visible: boolean) => void): () => void;
   };
   readonly app: {

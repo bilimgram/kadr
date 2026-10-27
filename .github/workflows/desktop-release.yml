@@ -57,6 +57,16 @@ jobs:
             echo "::error::Tag $TAG does not match apps/desktop/package.json version $version"
             exit 1
           fi
+      - name: Smoke test the production build
+        if: runner.os != 'macOS'
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+            xvfb-run -a pnpm --filter @kadr/desktop test:e2e
+          else
+            pnpm --filter @kadr/desktop test:e2e
+          fi
       - name: Package
         shell: bash
         run: |

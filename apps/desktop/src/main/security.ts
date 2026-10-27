@@ -1,18 +1,7 @@
 import { app, desktopCapturer, screen, session, shell } from "electron";
-import { APP_ORIGIN } from "./protocol";
+import { isAllowedExternalUrl, isTrustedOrigin } from "../shared/origin";
 
 const ALLOWED_PERMISSIONS = new Set(["media", "display-capture"]);
-
-/** True for the packaged app origin, and for the Vite dev server origin during development. */
-export function isTrustedOrigin(url: string | undefined, devServerUrl?: string): boolean {
-  if (!url) return false;
-  try {
-    const origin = new URL(url).origin;
-    return origin === APP_ORIGIN || (!!devServerUrl && origin === new URL(devServerUrl).origin);
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Applies the security baseline from docs/ARCHITECTURE.md §3.2: permission allowlist, no navigation,
@@ -49,7 +38,7 @@ export function hardenApp(devServerUrl?: string): void {
     });
     contents.on("will-attach-webview", (event) => event.preventDefault());
     contents.setWindowOpenHandler(({ url }) => {
-      if (url.startsWith("https://")) void shell.openExternal(url);
+      if (isAllowedExternalUrl(url)) void shell.openExternal(url);
       return { action: "deny" };
     });
   });

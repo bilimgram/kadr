@@ -54,6 +54,13 @@ corepack pnpm dev:desktop    # downloads the Electron binary on first run
 - **Settings** are stored in `settings.json` in Electron's `userData` folder
   (`%APPDATA%\@kadr\desktop` on Windows in dev). Delete it to reset to defaults.
 - **Recordings** go to `Videos/Kadr`.
+- **Production behavior:** dev serves pages from `http://localhost`; the installed app serves them
+  from `kadr://app` with a strict CSP. `corepack pnpm --filter @kadr/desktop test:e2e` builds the
+  app and drives the production pages with Playwright in a throwaway profile (it runs in CI on
+  Windows and Linux, and before every release). Failures leave traces in
+  `apps/desktop/test-results/`.
+- **Installed build:** `corepack pnpm --filter @kadr/desktop dist:dir` and run
+  `apps/desktop/release/<version>/win-unpacked/Kadr.exe` (or the `mac`/`linux-unpacked` app).
 
 ## Dependencies
 

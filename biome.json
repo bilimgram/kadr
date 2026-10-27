@@ -14,7 +14,10 @@
       "!**/coverage",
       "!**/.turbo",
       "!**/target",
-      "!pnpm-lock.yaml",
+      "!**/test-results",
+      "!**/playwright-report",
+      "!**/pnpm-lock.yaml",
+      "!**/CHANGELOG.md",
       "!.changeset/*.md"
     ]
   },

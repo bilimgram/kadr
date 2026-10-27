@@ -1,6 +1,8 @@
+export { ActivityIndicator, type ActivityIndicatorProps } from "./ActivityIndicator";
 export { Alert, type AlertProps } from "./Alert";
 export { Button, type ButtonProps } from "./Button";
 export { Countdown, type CountdownProps } from "./Countdown";
+export { ErrorBoundary, type ErrorBoundaryProps } from "./ErrorBoundary";
 export { cx, formatBytes, formatDuration, formatShortcut } from "./format";
 export { Kbd } from "./Kbd";
 export { SegmentedControl, type SegmentedOption } from "./SegmentedControl";

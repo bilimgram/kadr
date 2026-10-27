@@ -11,6 +11,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   },
   appearance: { theme: "light" },
   updates: { channel: "stable", automatic: true },
+  system: { openAtLogin: false },
 };
 
 /** Applies a partial update; the result is validated so invalid combinations never persist. */
@@ -20,6 +21,7 @@ export function mergeSettings(base: AppSettings, patch: AppSettingsPatch): AppSe
     recording: { ...base.recording, ...patch.recording },
     appearance: { ...base.appearance, ...patch.appearance },
     updates: { ...base.updates, ...patch.updates },
+    system: { ...base.system, ...patch.system },
   });
 }
 
@@ -33,12 +35,14 @@ export function parseStoredSettings(json: unknown): AppSettings {
   const recording = AppSettingsPatch.shape.recording.safeParse(record.recording);
   const appearance = AppSettingsPatch.shape.appearance.safeParse(record.appearance);
   const updates = AppSettingsPatch.shape.updates.safeParse(record.updates);
+  const system = AppSettingsPatch.shape.system.safeParse(record.system);
   try {
     return mergeSettings(DEFAULT_SETTINGS, {
       bubble: bubble.success ? bubble.data : undefined,
       recording: recording.success ? recording.data : undefined,
       appearance: appearance.success ? appearance.data : undefined,
       updates: updates.success ? updates.data : undefined,
+      system: system.success ? system.data : undefined,
     });
   } catch {
     return DEFAULT_SETTINGS;

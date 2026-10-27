@@ -8,11 +8,11 @@ import {
   toneForLuma,
 } from "@kadr/compositor";
 import { getBubbleShape } from "@kadr/compositor/shapes";
-import { cx } from "@kadr/ui";
+import { ActivityIndicator, cx } from "@kadr/ui";
 import { VideoOff } from "lucide-react";
 import { type CSSProperties, type RefObject, useEffect, useRef, useState } from "react";
 import { interactiveRegion, useWindowDrag } from "../floating";
-import { useSettings } from "../hooks";
+import { useBubbleVisible, useSettings } from "../hooks";
 
 const CLIP_ID = "kadr-bubble-clip";
 /** Re-meter the face this often; tone changes ease in between. */
@@ -107,6 +107,8 @@ function useLightCorrection(
 export function BubbleApp() {
   const [settings] = useSettings();
   const [error, setError] = useState<string | null>(null);
+  // False until the first camera frame plays: until then the bubble shows a spinner.
+  const [cameraReady, setCameraReady] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drag = useWindowDrag();
@@ -114,8 +116,13 @@ export function BubbleApp() {
   const mirror = settings?.bubble.mirror ?? true;
   const { enhanced, fallbackFilter } = useLightCorrection(videoRef, canvasRef, touchUp, mirror);
 
+  // Hold the camera only while the bubble is on screen: a hidden window would otherwise keep the
+  // camera (and its privacy light) on after the panel closes.
+  const visible = useBubbleVisible();
   const cameraDeviceId = settings?.bubble.cameraDeviceId;
   useEffect(() => {
+    if (!visible) return;
+    setCameraReady(false);
     let stream: MediaStream | null = null;
     let cancelled = false;
     const video: MediaTrackConstraints = {
@@ -141,11 +148,13 @@ export function BubbleApp() {
     return () => {
       cancelled = true;
       for (const track of stream?.getTracks() ?? []) track.stop();
+      if (videoRef.current) videoRef.current.srcObject = null;
     };
-  }, [cameraDeviceId]);
+  }, [cameraDeviceId, visible]);
 
-  if (!settings) return null;
-  const shape = getBubbleShape(settings.bubble.shape);
+  // Drawn right away (default shape until settings arrive), so the bubble never appears blank.
+  const shape = getBubbleShape(settings?.bubble.shape ?? "circle");
+  const spinnerSize = Math.max(22, Math.min(44, Math.round(window.innerHeight * 0.17)));
   const shapeStyle: CSSProperties =
     shape.kind === "path"
       ? { clipPath: `url(#${CLIP_ID})` }
@@ -176,13 +185,33 @@ export function BubbleApp() {
           <>
             <video
               ref={videoRef}
-              className={cx("bubble__video", !enhanced && mirror && "bubble__video--mirror")}
+              className={cx(
+                "bubble__video bubble__media",
+                cameraReady && "bubble__media--ready",
+                !enhanced && mirror && "bubble__video--mirror",
+              )}
               style={enhanced ? undefined : { filter: fallbackFilter }}
+              onPlaying={() => setCameraReady(true)}
+              onEmptied={() => setCameraReady(false)}
               autoPlay
               muted
               playsInline
             />
-            {touchUp && <canvas ref={canvasRef} className="bubble__canvas" hidden={!enhanced} />}
+            {touchUp && (
+              <canvas
+                ref={canvasRef}
+                className={cx(
+                  "bubble__canvas bubble__media",
+                  cameraReady && "bubble__media--ready",
+                )}
+                hidden={!enhanced}
+              />
+            )}
+            {!cameraReady && (
+              <div className="bubble__loading">
+                <ActivityIndicator label="Starting camera" size={spinnerSize} />
+              </div>
+            )}
           </>
         )}
       </div>

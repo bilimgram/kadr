@@ -16,6 +16,7 @@ Always run pnpm through Corepack (`corepack pnpm …`); the version is pinned in
 | Web app                                         | `corepack pnpm dev:web`                                                                              |
 | Everything CI checks (lint + typecheck + tests) | `corepack pnpm check`                                                                                |
 | Single package tests                            | `corepack pnpm --filter @kadr/<name> test`                                                           |
+| Desktop smoke test (production build)           | `corepack pnpm --filter @kadr/desktop test:e2e`                                                      |
 | Auto-fix formatting/lint                        | `corepack pnpm lint:fix`                                                                             |
 | Production builds                               | `corepack pnpm build`                                                                                |
 | Rust                                            | `cargo fmt --all`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace` |

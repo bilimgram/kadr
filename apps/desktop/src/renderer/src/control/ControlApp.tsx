@@ -15,6 +15,7 @@ import {
   ChevronDown,
   ChevronLeft,
   Ellipsis,
+  ExternalLink,
   FolderOpen,
   LoaderCircle,
   Mic,
@@ -40,13 +41,19 @@ import type {
   UpdateState,
 } from "../../../shared/api";
 import { updateStatusText } from "../../../shared/updates";
-import { useSettings, useShortcuts, useUpdates } from "../hooks";
+import { useSettingsWithStatus, useShortcuts, useUpdates } from "../hooks";
 import { engine } from "./engine";
 import { useFitWindowToContent, useMicLevelMeter, usePanelVisible } from "./panel-hooks";
 
 type View = "main" | "bubble" | "countdown" | "audio" | "more";
 
 const icon = { className: "k-icon", "aria-hidden": true } as const;
+
+/**
+ * Hides the panel to the tray. Not `window.close()`: a page-initiated close destroys the window,
+ * and with it the recording engine that lives in this window.
+ */
+const closePanel = () => window.kadr.panel.hide();
 
 const SIZE_OPTIONS: ReadonlyArray<SegmentedOption<BubbleSizePreset>> = [
   { value: "small", label: "Small" },
@@ -201,7 +208,7 @@ function SubView({
 
 /** The control panel: a compact, Loom-style card that lives in the tray. */
 export function ControlApp() {
-  const [settings, update] = useSettings();
+  const { settings, update, error: settingsError, retry } = useSettingsWithStatus();
   const session = useSyncExternalStore(engine.subscribe, engine.getSnapshot);
   const shortcuts = useShortcuts();
   const updates = useUpdates();
@@ -225,6 +232,17 @@ export function ControlApp() {
     if (!panelVisible) setView("main");
   }, [panelVisible]);
 
+  // Esc goes back from a settings page, and closes the panel from the main view.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      if (view === "main") closePanel();
+      else setView("main");
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [view]);
+
   return (
     <div ref={panelRef} className="panel">
       <header className="panel__header">
@@ -237,11 +255,31 @@ export function ControlApp() {
           className="icon-button"
           aria-label="Close (Kadr keeps running in the tray)"
           title="Close"
-          onClick={() => window.kadr.panel.hide()}
+          onClick={closePanel}
         >
           <X {...icon} />
         </button>
       </header>
+      {!settings && settingsError && (
+        <div className="panel__body">
+          <Alert
+            tone="error"
+            title="Kadr couldn't load its settings"
+            actions={
+              <div className="result-actions">
+                <Button size="sm" variant="primary" onClick={retry}>
+                  Try again
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => window.kadr.app.quit()}>
+                  Quit Kadr
+                </Button>
+              </div>
+            }
+          >
+            {settingsError}
+          </Alert>
+        </div>
+      )}
       {settings &&
         (view === "main" ? (
           <MainView
@@ -546,6 +584,14 @@ function SettingsView({
               onChange={(theme) => update({ appearance: { theme } })}
             />
           </div>
+          {platform !== "linux" && (
+            <Switch
+              label="Open Kadr at login"
+              description="Start quietly in the tray when you sign in"
+              checked={settings.system.openAtLogin}
+              onChange={(openAtLogin) => update({ system: { openAtLogin } })}
+            />
+          )}
           {updates && (
             <UpdatesSection
               state={updates}
@@ -572,6 +618,7 @@ function SettingsView({
               )}
             </dd>
           </dl>
+          <HelpLinks version={updates?.currentVersion ?? null} platform={platform} />
           <div className="subview__actions">
             <Button
               icon={<FolderOpen {...icon} />}
@@ -590,6 +637,50 @@ function SettingsView({
         </SubView>
       );
   }
+}
+
+const REPO_URL = "https://github.com/bilimgram/kadr";
+const PLATFORM_NAMES: Record<string, string> = {
+  win32: "Windows",
+  darwin: "macOS",
+  linux: "Linux",
+};
+
+/** Links open in the browser (allowlisted in main/security.ts); the issue form is prefilled. */
+function HelpLinks({ version, platform }: { version: string | null; platform: string }) {
+  const issue = new URLSearchParams({
+    template: "bug_report.yml",
+    app: "Desktop",
+    version: version ?? "",
+    platform: PLATFORM_NAMES[platform] ?? platform,
+  });
+  const links = [
+    { label: "User guide and FAQ", href: `${REPO_URL}/blob/main/docs/USER_GUIDE.md` },
+    { label: "Report a problem", href: `${REPO_URL}/issues/new?${issue}` },
+    { label: "Ideas and questions", href: `${REPO_URL}/discussions` },
+    { label: "Privacy", href: `${REPO_URL}/blob/main/PRIVACY.md` },
+    { label: "Source code", href: REPO_URL },
+  ];
+  return (
+    <section className="help-links" aria-labelledby="help-title">
+      <span id="help-title" className="k-field__label">
+        Help and feedback
+      </span>
+      <ul>
+        {links.map((link) => (
+          <li key={link.label}>
+            <a href={link.href} target="_blank" rel="noreferrer">
+              {link.label}
+              <ExternalLink {...icon} />
+            </a>
+          </li>
+        ))}
+      </ul>
+      <p className="help-links__about">
+        Kadr {version ?? ""} · Open source under Apache-2.0 · Made by Bilimgram
+      </p>
+    </section>
+  );
 }
 
 function UpdatesSection({

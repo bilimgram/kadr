@@ -586,6 +586,26 @@ body.overlay-page {
   display: none;
 }
 
+/* Camera frames fade in once the first one plays, replacing the spinner. */
+.bubble__media {
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+}
+
+.bubble__media--ready {
+  opacity: 1;
+}
+
+.bubble__loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: rgb(255 255 255 / 0.9);
+  background: radial-gradient(circle at 50% 38%, #2b3144 0%, #161a24 100%);
+  pointer-events: none;
+}
+
 .bubble__error {
   display: flex;
   flex-direction: column;
@@ -635,6 +655,47 @@ body.overlay-page {
 
 .updates__hint {
   margin: -4px 0 0;
+  font-size: var(--k-text-xs);
+  color: var(--k-text-subtle);
+}
+
+.help-links {
+  display: grid;
+  gap: 6px;
+}
+
+.help-links ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2px;
+}
+
+.help-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--k-text-sm);
+  color: var(--k-text);
+  text-decoration: none;
+  border-radius: 6px;
+}
+
+.help-links a .k-icon {
+  width: 13px;
+  height: 13px;
+  color: var(--k-text-subtle);
+}
+
+.help-links a:hover,
+.help-links a:focus-visible {
+  color: var(--k-accent);
+  text-decoration: underline;
+}
+
+.help-links__about {
+  margin: 4px 0 0;
   font-size: var(--k-text-xs);
   color: var(--k-text-subtle);
 }

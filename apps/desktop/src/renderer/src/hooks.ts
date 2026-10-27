@@ -10,15 +10,68 @@ import { elapsedMs, IDLE_SNAPSHOT } from "../../shared/session";
 
 /** Persisted settings, kept in sync across windows. */
 export function useSettings(): [AppSettings | null, (patch: AppSettingsPatch) => void] {
-  const [settings, setSettings] = useState<AppSettings | null>(null);
-  useEffect(() => {
-    void window.kadr.settings.get().then(setSettings);
-    return window.kadr.settings.onChange(setSettings);
-  }, []);
-  const update = useCallback((patch: AppSettingsPatch) => {
-    void window.kadr.settings.update(patch).then(setSettings);
-  }, []);
+  const { settings, update } = useSettingsWithStatus();
   return [settings, update];
+}
+
+/**
+ * Persisted settings plus load status, so the control panel can explain a failure instead of
+ * staying blank. `retry` asks the main process again.
+ */
+export function useSettingsWithStatus(): {
+  settings: AppSettings | null;
+  update: (patch: AppSettingsPatch) => void;
+  error: string | null;
+  retry: () => void;
+} {
+  const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let active = true;
+    window.kadr.settings
+      .get()
+      .then((loaded) => {
+        if (!active) return;
+        setSettings(loaded);
+        setError(null);
+      })
+      .catch((reason: unknown) => {
+        if (active) setError(reason instanceof Error ? reason.message : String(reason));
+      });
+    const unsubscribe = window.kadr.settings.onChange(setSettings);
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [attempt]);
+  const update = useCallback((patch: AppSettingsPatch) => {
+    window.kadr.settings
+      .update(patch)
+      .then(setSettings)
+      .catch((reason: unknown) =>
+        setError(reason instanceof Error ? reason.message : String(reason)),
+      );
+  }, []);
+  const retry = useCallback(() => setAttempt((n) => n + 1), []);
+  return { settings, update, error, retry };
+}
+
+/** Whether the bubble window is on screen, as reported by the main process. */
+export function useBubbleVisible(): boolean {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    let active = true;
+    const unsubscribe = window.kadr.bubble.onVisibilityChange(setVisible);
+    void window.kadr.bubble.isVisible().then((shown) => {
+      if (active) setVisible(shown);
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
+  return visible;
 }
 
 /** The current recording session, as published by the recording engine. */

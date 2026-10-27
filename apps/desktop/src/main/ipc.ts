@@ -8,6 +8,7 @@ import {
 } from "electron";
 import { z } from "zod";
 import { type ActiveShortcuts, Channels } from "../shared/api";
+import { isTrustedOrigin } from "../shared/origin";
 import {
   AppSettingsPatch,
   CountdownConfig,
@@ -22,7 +23,6 @@ import {
   SessionSnapshot,
 } from "../shared/schemas";
 import type { RecordingStore } from "./recordings";
-import { isTrustedOrigin } from "./security";
 import type { SessionCoordinator } from "./session";
 import type { SettingsStore } from "./settings-store";
 import type { UpdateService } from "./updater";
@@ -87,6 +87,7 @@ export function registerIpc(deps: IpcDependencies): void {
 
   // Settings and shortcuts
   handle(Channels.shortcutsGet, [], () => shortcuts);
+  handle(Channels.bubbleVisibilityGet, [], () => windows.isBubbleVisible());
   handle(Channels.settingsGet, [], () => settings.get());
   handle(Channels.settingsUpdate, [AppSettingsPatch], (_event, patch) => settings.update(patch));
 

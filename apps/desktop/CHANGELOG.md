@@ -1,5 +1,22 @@
 # @kadr/desktop
 
+## 0.1.1
+
+### Patch Changes
+
+- Fixes for the first preview, and a more polished bubble and control panel.
+  
+  - Fixed: in installed builds the control panel showed only its header, the close button did nothing,
+    and the camera couldn't start. Every request from the app's windows was wrongly rejected as
+    untrusted.
+  - Fixed: closing the panel now hides the camera bubble and turns the camera (and its light) off.
+  - The bubble appears instantly with a loading indicator and fades the camera in when it's ready.
+  - New in **Settings → More**: **Open Kadr at login** (Windows and macOS), and **Help and feedback**
+    with the user guide, a prefilled problem report, privacy and source links.
+  - Press <kbd>Esc</kbd> to go back from a settings page or close the panel.
+  - If a window ever fails, Kadr shows what went wrong or recovers by itself instead of going blank,
+    and a second launch brings the running Kadr forward.
+
 ## 0.1.0
 
 ### Minor Changes
