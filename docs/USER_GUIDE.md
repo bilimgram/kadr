@@ -74,7 +74,9 @@ Long recordings are limited by your device’s available memory.
 5. When you stop, the recording is saved to your **Videos/Kadr** folder as MP4 (or WebM), and the
    panel offers **Open** and **Show in folder**.
 
-Drag the bubble anywhere on screen; it is recorded wherever you put it.
+Drag the bubble anywhere on screen; it is recorded wherever you put it. It stays on top of every
+other window, remembers its place the next time you open Kadr, and moves back into view if you
+disconnect a monitor.
 
 ## Settings
 

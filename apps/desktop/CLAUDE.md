@@ -55,3 +55,9 @@ permissions or the protocol, and extend `e2e/smoke.e2e.ts` for new window behavi
 - Page Visibility doesn't update for hidden overlay windows; the main process signals visibility
   explicitly (`panel:visibility`, `bubble:visibility`). The bubble holds the camera only while
   visible.
+- On Windows all always-on-top windows share one band and the last activated wins, and a
+  hide/show cycle can drop the level. `WindowManager.raiseFloatingWindows` re-asserts it (focus
+  changes, display changes, every 1.5 s while visible); call it after showing a floating window.
+  The "stays above another app's window" e2e test guards this with a real screen capture.
+- Bubble placement rules are pure (`src/shared/placement.ts`); positions persist in
+  `window-state.json` (not settings, so drags don't broadcast settings changes).

@@ -1,5 +1,17 @@
 # @kadr/desktop
 
+## 0.1.2
+
+### Patch Changes
+
+- The camera bubble now stays on top of everything.
+  
+  - Fixed: the bubble could slip behind other windows after closing and reopening the panel, while
+    changing settings, or when another app's always-on-top window (a call or video player) was
+    activated. Kadr now keeps the bubble, toolbar and countdown at the very top, without taking focus.
+  - The bubble remembers where you put it, and moves back into view if a monitor is disconnected or
+    the screen resolution changes; resizing it near a screen edge keeps it fully on screen.
+
 ## 0.1.1
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@kadr/desktop",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "Kadr desktop app: screen recorder with a live, shaped webcam bubble.",
   "license": "Apache-2.0",

@@ -12,6 +12,7 @@ import { SettingsStore } from "./settings-store";
 import { registerShortcuts } from "./shortcuts";
 import { createTray } from "./tray";
 import { UpdateService } from "./updater";
+import { WindowStateStore } from "./window-state";
 import { WindowManager } from "./windows";
 
 const devServerUrl = process.env.ELECTRON_RENDERER_URL;
@@ -29,6 +30,7 @@ let windows: WindowManager | null = null;
 // Module-level reference so the tray icon is not garbage-collected.
 let tray: Electron.Tray | null = null;
 let updates: UpdateService | null = null;
+let windowState: WindowStateStore | null = null;
 
 app.on("web-contents-created", (_event, contents) => {
   contents.on("render-process-gone", (_e, details) => {
@@ -53,6 +55,7 @@ app.on("window-all-closed", () => undefined);
 app.on("will-quit", () => {
   globalShortcut.unregisterAll();
   updates?.dispose();
+  windowState?.flushSync();
   tray?.destroy();
 });
 
@@ -68,7 +71,9 @@ app.whenReady().then(async () => {
 
   const settings = new SettingsStore();
   await settings.load();
-  windows = new WindowManager();
+  windowState = new WindowStateStore();
+  await windowState.load();
+  windows = new WindowManager(windowState);
   const session = new SessionCoordinator(windows, settings);
 
   const shortcuts = registerShortcuts({

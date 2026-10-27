@@ -3,13 +3,20 @@ import { getBubbleShape } from "@kadr/compositor/shapes";
 import { app, BrowserWindow, screen, type WebPreferences } from "electron";
 import { type AppSettings, Channels } from "../shared/api";
 import { APP_ORIGIN } from "../shared/origin";
+import { clampIntoArea, isFullyVisible, resolveBubblePosition } from "../shared/placement";
 import { isBubbleShown } from "../shared/settings";
+import type { WindowStateStore } from "./window-state";
 
 type Page = "control" | "bubble" | "toolbar" | "countdown";
 
 /** Loom-like bubble sizes (diameter in DIPs). */
 const BUBBLE_PIXEL_HEIGHT = { small: 150, medium: 200, large: 280 } as const;
-const BUBBLE_MARGIN = 24;
+/**
+ * How often floating windows re-assert their place at the top while visible. On Windows every
+ * always-on-top window shares one band, and whichever was activated last (another app's player or
+ * call window, even our own panel) ends up above ours.
+ */
+const KEEP_ON_TOP_INTERVAL_MS = 1500;
 /** Control panel: 320 px card plus a transparent margin for its shadow. */
 const PANEL_WIDTH = 344;
 const PANEL_MARGIN = 12;
@@ -77,11 +84,25 @@ export class WindowManager {
   private sessionActive = false;
   private toolbarMovedByUser = false;
   private quitting = false;
+  private keepOnTopTimer: NodeJS.Timeout | null = null;
 
-  constructor() {
+  constructor(private readonly windowState: WindowStateStore) {
     app.on("before-quit", () => {
       this.quitting = true;
+      if (this.keepOnTopTimer) clearInterval(this.keepOnTopTimer);
+      this.keepOnTopTimer = null;
     });
+    // Another window took the top of the stack (including our own panel): put ours back on top.
+    app.on("browser-window-focus", () => this.raiseFloatingWindows());
+    app.on("browser-window-blur", () => this.raiseFloatingWindows());
+    // Displays changed (unplugged monitor, new resolution): keep the bubble fully visible.
+    const onDisplaysChanged = () => {
+      this.keepBubbleOnScreen();
+      this.raiseFloatingWindows();
+    };
+    screen.on("display-added", onDisplaysChanged);
+    screen.on("display-removed", onDisplaysChanged);
+    screen.on("display-metrics-changed", onDisplaysChanged);
   }
 
   /** The control panel: a compact, frameless card near the top-right corner, like a tray app. */
@@ -124,16 +145,18 @@ export class WindowManager {
   }
 
   createBubble(settings: AppSettings): void {
-    const { width, height } = bubbleWindowSize(settings);
-    const area = screen.getPrimaryDisplay().workArea;
-    const win = createOverlayWindow("bubble", {
-      width,
-      height,
-      x: area.x + BUBBLE_MARGIN,
-      y: area.y + area.height - height - BUBBLE_MARGIN,
-    });
+    const size = bubbleWindowSize(settings);
+    // Where the user left it, if that is still fully on a display; otherwise the default corner.
+    const position = resolveBubblePosition(
+      this.windowState.bubblePosition,
+      size,
+      screen.getAllDisplays().map((display) => display.workArea),
+      screen.getPrimaryDisplay().workArea,
+    );
+    const win = createOverlayWindow("bubble", { ...size, ...position });
     this.keepOpenUntilQuit(win);
     win.setIgnoreMouseEvents(true, { forward: true });
+    win.on("moved", () => this.rememberBubblePosition());
     win.once("ready-to-show", () => this.syncBubble());
     this.bubble = win;
     this.settings = settings;
@@ -197,6 +220,7 @@ export class WindowManager {
     if (!win || win.isVisible()) return;
     if (!this.toolbarMovedByUser) this.placeToolbarAboveBubble(win);
     win.showInactive();
+    this.raiseFloatingWindows();
   }
 
   hideToolbar(): void {
@@ -206,6 +230,7 @@ export class WindowManager {
   /** Called when the user drags a floating window, so we stop auto-placing it. */
   noteUserMoved(win: BrowserWindow): void {
     if (win === this.toolbar) this.toolbarMovedByUser = true;
+    if (win === this.bubble) this.rememberBubblePosition();
   }
 
   openCountdown(onClosed: () => void): void {
@@ -252,8 +277,10 @@ export class WindowManager {
     const bounds = win.getBounds();
     const size = bubbleWindowSize(settings);
     if (size.width !== bounds.width || size.height !== bounds.height) {
-      // Keep the bottom-left corner anchored while resizing.
-      win.setBounds({ x: bounds.x, y: bounds.y + bounds.height - size.height, ...size });
+      // Keep the bottom-left corner anchored while resizing, but never past a screen edge.
+      const resized = { x: bounds.x, y: bounds.y + bounds.height - size.height, ...size };
+      const area = screen.getDisplayMatching(bounds).workArea;
+      win.setBounds({ ...resized, ...clampIntoArea(resized, area) });
     }
     this.syncBubble();
   }
@@ -269,10 +296,59 @@ export class WindowManager {
     const win = this.bubble;
     if (!win || win.isDestroyed() || !this.settings) return;
     const shown = isBubbleShown(this.settings) && (this.sessionActive || this.isControlVisible());
-    if (shown && !win.isVisible()) win.showInactive();
-    if (!shown && win.isVisible()) win.hide();
+    if (shown) {
+      this.keepBubbleOnScreen();
+      if (!win.isVisible()) win.showInactive();
+    } else if (win.isVisible()) {
+      win.hide();
+    }
     // The bubble starts and stops the camera on this signal.
     win.webContents.send(Channels.bubbleVisibility, shown);
+    this.raiseFloatingWindows();
+  }
+
+  /**
+   * Puts the bubble, toolbar and countdown back at the very top of the window stack, above other
+   * always-on-top windows, without taking focus. Repeats while any of them is visible.
+   */
+  private raiseFloatingWindows(): void {
+    let anyVisible = false;
+    for (const win of [this.bubble, this.toolbar, this.countdown]) {
+      if (!win || win.isDestroyed() || !win.isVisible()) continue;
+      anyVisible = true;
+      // Re-applied every time: Windows can drop the level after a hide/show cycle.
+      win.setAlwaysOnTop(true, "screen-saver");
+      win.moveTop();
+    }
+    if (anyVisible && !this.keepOnTopTimer) {
+      this.keepOnTopTimer = setInterval(() => this.raiseFloatingWindows(), KEEP_ON_TOP_INTERVAL_MS);
+    } else if (!anyVisible && this.keepOnTopTimer) {
+      clearInterval(this.keepOnTopTimer);
+      this.keepOnTopTimer = null;
+    }
+  }
+
+  /** Moves the bubble back to the default corner if it isn't fully on any display. */
+  private keepBubbleOnScreen(): void {
+    const win = this.bubble;
+    if (!win || win.isDestroyed()) return;
+    const bounds = win.getBounds();
+    const areas = screen.getAllDisplays().map((display) => display.workArea);
+    if (isFullyVisible(bounds, areas)) return;
+    const position = resolveBubblePosition(
+      null,
+      bounds,
+      areas,
+      screen.getPrimaryDisplay().workArea,
+    );
+    win.setPosition(position.x, position.y);
+  }
+
+  private rememberBubblePosition(): void {
+    const win = this.bubble;
+    if (!win || win.isDestroyed()) return;
+    const [x = 0, y = 0] = win.getPosition();
+    this.windowState.rememberBubble({ x, y });
   }
 
   /** Whether the bubble window is on screen. */
