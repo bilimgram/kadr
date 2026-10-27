@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { _electron, type ElectronApplication, expect, type Page, test } from "@playwright/test";
 
 // Playwright loads this package's tests as CommonJS, so `import.meta` isn't available.
@@ -94,7 +94,18 @@ test.beforeEach(async () => {
   app = await launchApp();
 });
 
+/**
+ * Tests that only run on Windows. Skipped up front, so no app is launched for them elsewhere:
+ * closing Kadr in its first moments can leave Playwright's debugger connection waiting on the
+ * process forever (Kadr itself exits fine then), which failed Linux CI as a teardown timeout.
+ */
+const windowsOnly = process.platform === "win32" ? test : test.skip;
+
 test.afterEach(async () => {
+  // For the same reason, let startup finish before closing a test that ended early.
+  await windowFor("control")
+    .then((panel) => panel.waitForLoadState("domcontentloaded"))
+    .catch(() => undefined);
   await app?.close();
   rmSync(userDataDir, { recursive: true, force: true });
 });
@@ -253,9 +264,8 @@ test("the bubble returns where the user left it after quitting and relaunching",
   expect(position).toEqual(moved);
 });
 
-test("the bubble stays above another app's always-on-top window", async () => {
-  // Windows-only: Linux CI has no window manager to enforce always-on-top stacking.
-  test.skip(process.platform !== "win32", "Window stacking is checked on Windows");
+// Windows-only: Linux CI has no window manager to enforce always-on-top stacking.
+windowsOnly("the bubble stays above another app's always-on-top window", async () => {
   await windowFor("control");
   await windowFor("bubble");
   await expect.poll(bubbleWindowState).toBe("shown");
@@ -390,9 +400,8 @@ test("the region picker opens on Start, selects with the keyboard, and cancels c
   expect(await sessionStatus()).toBe("idle");
 });
 
-test("recording a region captures exactly that area and copies the file", async () => {
-  // Real screen capture and encoding; checked on Windows, like the stacking test.
-  test.skip(process.platform !== "win32", "Screen capture is checked on Windows");
+// Real screen capture and encoding; checked on Windows, like the stacking test.
+windowsOnly("recording a region captures exactly that area and copies the file", async () => {
   const panel = await windowFor("control");
   await expect(panel.getByRole("button", { name: "Start recording" })).toBeVisible();
   // Recordings go to a throwaway folder, and the user's clipboard text is put back afterwards.
@@ -491,7 +500,9 @@ test("recording a region captures exactly that area and copies the file", async 
       const item = (await clipboard.read()).find((i) => i.types.includes("text/uri-list"));
       return item ? (await item.getType("text/uri-list")).text() : null;
     });
-    expect(copied?.trim()).toBe(pathToFileURL(result.path).href);
+    // Compared as paths: Node escapes "~" (as in a short name like RUNNER~1) in file URLs, while
+    // Chromium reads the clipboard's file list back with a plain "~".
+    expect(copied ? fileURLToPath(copied.trim()) : null).toBe(result.path);
 
     // The compact card: icon actions with tooltips (the accessible name is the tooltip text).
     const card = panel.getByRole("region", { name: "Last recording" });
