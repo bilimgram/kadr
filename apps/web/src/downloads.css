@@ -1,0 +1,393 @@
+/* biome-ignore-all lint/style/noDescendingSpecificity: Independent component selectors are intentionally grouped by component. */
+.download-section {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  align-items: center;
+  gap: 70px;
+  border-top: 1px solid var(--k-border);
+  padding-top: 65px;
+  scroll-margin-top: 35px;
+}
+.download-intro > .eyebrow {
+  color: var(--k-text-muted);
+  margin-bottom: 17px;
+}
+.download-intro > h2 {
+  font-size: clamp(37px, 4.5vw, 55px);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.055em;
+  margin: 0 0 22px;
+}
+.download-intro > h2 > span {
+  color: var(--k-accent);
+}
+.download-intro > p:not(.eyebrow) {
+  font-size: 15px;
+  line-height: 1.9;
+  color: var(--k-text-muted);
+  max-width: 360px;
+  margin: 0;
+}
+.download-benefits {
+  list-style: none;
+  padding: 0;
+  margin: 26px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.download-benefits > li {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-size: 13px;
+}
+.download-benefits svg {
+  color: var(--k-accent);
+  width: 18px;
+  height: 18px;
+}
+.browser-alternative {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  text-decoration: none;
+  color: var(--k-accent);
+  font-size: 13px;
+  font-weight: 550;
+}
+.browser-alternative svg {
+  width: 15px;
+  height: 15px;
+}
+.download-card {
+  background: var(--k-surface);
+  border: 1px solid var(--k-border);
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: var(--k-shadow-lg);
+  min-width: 0;
+}
+.download-card__heading {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 27px;
+}
+.download-symbol {
+  display: grid;
+  place-items: center;
+  height: 45px;
+  width: 45px;
+  border-radius: 12px;
+  background: var(--k-accent-soft);
+  color: var(--k-accent);
+}
+.download-symbol svg {
+  width: 23px;
+  height: 23px;
+}
+.download-card h3 {
+  font-size: 23px;
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  margin: 0 0 4px;
+  line-height: 1.1;
+}
+.download-card__heading p {
+  font-size: 12px;
+  color: var(--k-text-muted);
+  margin: 0;
+}
+.download-platform .setting__label,
+.download-variant .setting__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+.download-card .k-segmented {
+  border-radius: 8px;
+  background: var(--k-surface-2);
+  padding: 4px;
+}
+.download-card .k-segmented__option {
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 5px;
+  font-size: 12px;
+  gap: 7px;
+}
+.download-card .k-segmented__option svg {
+  width: 16px;
+  height: 16px;
+}
+.download-card .k-segmented__option:has(input:checked) {
+  color: var(--k-accent);
+}
+.download-variant {
+  margin-top: 20px;
+}
+.download-variant .setting__label svg {
+  width: 13px;
+  height: 13px;
+}
+.chip-help {
+  margin-top: 10px;
+}
+.chip-help > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--k-text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  list-style: none;
+}
+.chip-help > summary::-webkit-details-marker {
+  display: none;
+}
+.chip-help > summary svg {
+  width: 12px;
+  height: 12px;
+}
+.chip-help[open] > summary svg {
+  transform: rotate(180deg);
+}
+.chip-help > p,
+.package-help {
+  color: var(--k-text-muted);
+  font-size: 11px;
+  line-height: 1.9;
+  margin: 8px 0 0;
+}
+.download-release {
+  padding-top: 22px;
+  margin-top: 22px;
+  border-top: 1px solid var(--k-border);
+}
+.release-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--k-text-muted);
+  font-size: 10px;
+  margin-bottom: 16px;
+}
+.release-version {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--k-success);
+  font-size: 11px;
+  font-weight: 600;
+}
+.release-version .status-dot {
+  background: var(--k-success);
+  width: 5px;
+  height: 5px;
+}
+.download-loading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--k-text-muted);
+  font-size: 12px;
+  margin: 0 0 16px;
+}
+.download-loading svg {
+  width: 14px;
+  height: 14px;
+}
+.download-card .platform-download {
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  font-size: 14px;
+  border-radius: 9px;
+}
+.platform-download > svg:last-child {
+  margin-left: auto;
+  width: 15px;
+  height: 15px;
+}
+.platform-download > svg:first-child {
+  width: 17px;
+  height: 17px;
+}
+.download-file {
+  text-align: center;
+  color: var(--k-text-muted);
+  font-size: 11px;
+  margin: 11px 0 0;
+  line-height: 1.8;
+}
+.download-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 21px;
+  color: var(--k-text-muted);
+  font-size: 10px;
+}
+.download-card__footer > .k-button {
+  min-height: 28px;
+  padding: 0;
+  font-size: 10px;
+  gap: 4px;
+}
+.download-card__footer > .k-button svg {
+  width: 12px;
+  height: 12px;
+}
+.download-card__footer > .k-button:hover {
+  background: transparent;
+  color: var(--k-accent);
+}
+.download-card__footer > .k-button:disabled {
+  cursor: wait;
+}
+.download-error {
+  padding: 0 0 17px;
+}
+.download-error > p {
+  color: var(--k-text-muted);
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.download-error > .k-button {
+  font-size: 12px;
+}
+.download-error svg {
+  width: 14px;
+  height: 14px;
+}
+.download-unavailable {
+  padding: 15px;
+  border-radius: 8px;
+  background: var(--k-surface-2);
+}
+.download-unavailable > p {
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 0 0 8px;
+}
+.download-unavailable > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--k-accent);
+}
+.download-unavailable svg {
+  width: 13px;
+  height: 13px;
+}
+.download-confirmation {
+  display: flex;
+  align-items: start;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--k-success);
+  margin: 14px 0 0;
+}
+.download-confirmation svg {
+  width: 14px;
+  height: 14px;
+  margin-top: 3px;
+}
+.install-help {
+  margin-top: 17px;
+  border-top: 1px solid var(--k-border);
+  padding-top: 17px;
+}
+.install-help > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 550;
+  list-style: none;
+}
+.install-help > summary::-webkit-details-marker {
+  display: none;
+}
+.install-help > summary svg {
+  height: 14px;
+  width: 14px;
+}
+.install-help[open] > summary svg {
+  transform: rotate(180deg);
+}
+.install-help > ol {
+  padding-left: 18px;
+  margin: 17px 0 12px;
+  color: var(--k-text-muted);
+  font-size: 12px;
+  line-height: 1.9;
+}
+.install-help li + li {
+  margin-top: 7px;
+}
+.install-help > p {
+  color: var(--k-text-muted);
+  font-size: 10px;
+  line-height: 1.8;
+  margin: 0;
+}
+@media (max-width: 1000px) {
+  .download-section {
+    gap: 35px;
+  }
+  .download-card {
+    padding: 24px;
+  }
+  .download-card .k-segmented__option {
+    font-size: 11px;
+    padding: 0 7px;
+  }
+}
+@media (max-width: 740px) {
+  .download-section {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    padding-top: 44px;
+  }
+  .download-intro > h2 {
+    font-size: 43px;
+  }
+  .download-intro > p:not(.eyebrow) {
+    font-size: 14px;
+    max-width: none;
+  }
+  .download-benefits {
+    margin: 22px 0;
+  }
+  .download-card {
+    padding: 23px 20px;
+  }
+  .download-card .k-segmented__option {
+    min-height: 44px;
+    font-size: 12px;
+  }
+  .download-platform .k-segmented__option {
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 4px;
+  }
+  .download-card__footer {
+    font-size: 10px;
+  }
+  .download-file {
+    font-size: 11px;
+  }
+}

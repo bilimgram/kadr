@@ -11,10 +11,10 @@ import {
   Sparkles,
   Video,
 } from "lucide-react";
+import { DownloadsSection } from "./DownloadsSection";
+import { DOWNLOADS, REPOSITORY } from "./links";
 
 const icon = { "aria-hidden": true } as const;
-export const REPOSITORY = "https://github.com/bilimgram/kadr";
-export const DOWNLOADS = `${REPOSITORY}/releases/latest`;
 
 export function SiteHeader() {
   return (
@@ -271,19 +271,7 @@ export function WebsiteSections() {
         </div>
       </section>
 
-      <section className="desktop-banner" aria-labelledby="desktop-title">
-        <span className="desktop-banner__icon">
-          <MonitorPlay {...icon} />
-        </span>
-        <div>
-          <p className="eyebrow">TAKE KADR WITH YOU</p>
-          <h2 id="desktop-title">One less tab. Same big ideas.</h2>
-          <p>Get floating controls and global shortcuts with Kadr for desktop.</p>
-        </div>
-        <a className="action-link action-link--dark" href={DOWNLOADS}>
-          Download the desktop app <ArrowRight {...icon} />
-        </a>
-      </section>
+      <DownloadsSection />
     </>
   );
 }
@@ -299,6 +287,7 @@ export function SiteFooter() {
         <p>Clearer ideas. Fewer meetings.</p>
       </div>
       <nav aria-label="Footer navigation">
+        <a href={DOWNLOADS}>Downloads</a>
         <a href={REPOSITORY}>Source code</a>
         <a href={`${REPOSITORY}/blob/main/PRIVACY.md`}>Privacy</a>
         <a href={`${REPOSITORY}/issues`}>Feedback</a>

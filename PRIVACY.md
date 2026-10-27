@@ -37,6 +37,13 @@ address to deliver it (see [GitHub's privacy statement](https://docs.github.com/
 The page sets no cookies and loads no analytics or third-party scripts. Recording happens in your
 browser's memory and is saved only when you download it.
 
+**Desktop downloads on the website.** When you view the download section, the page requests public
+release information from GitHub's API to display the latest version and the correct installer.
+It does not include recordings, capture inputs, account information, or an app identifier in that
+request. No GitHub credentials or cookies are sent by this lookup. Like any network request,
+GitHub receives your IP address. Clicking a download retrieves the installer from GitHub's
+release file hosting; it does not open the developer release page.
+
 ## Future features
 
 Planned features that involve a network, such as AI editing or sharing, will be opt-in, will send

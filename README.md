@@ -3,7 +3,7 @@
   <h1>Kadr</h1>
   <p><strong>Show it. Make it click.</strong></p>
   <p>A free, open-source screen recorder for walkthroughs, quick updates, and clearer ideas.<br />Your screen, your camera, your voice — and a video file you control.</p>
-  <p><a href="https://bilimgram.github.io/kadr/"><strong>Record a video →</strong></a> · <a href="https://github.com/bilimgram/kadr/releases/latest">Get the desktop app</a> · <a href="docs/USER_GUIDE.md">User guide</a></p>
+  <p><a href="https://bilimgram.github.io/kadr/"><strong>Record a video →</strong></a> · <a href="https://bilimgram.github.io/kadr/#download">Get the desktop app</a> · <a href="docs/USER_GUIDE.md">User guide</a></p>
   <p><a href="https://github.com/bilimgram/kadr/actions/workflows/ci.yml"><img src="https://github.com/bilimgram/kadr/actions/workflows/ci.yml/badge.svg" alt="CI" /></a> <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-7050e8" alt="Apache 2.0 license" /></a> <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/contributions-welcome-258168" alt="Contributions welcome" /></a></p>
 </div>
 
@@ -41,19 +41,24 @@ depends on your device’s available memory; use shorter takes for important mat
 
 ## Choose your workspace
 
-|                           | Web recorder                                                      | Desktop app                                                               |
-| ------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Get started               | [Open in your browser](https://bilimgram.github.io/kadr/)         | [Download for your OS](https://github.com/bilimgram/kadr/releases/latest) |
-| Screen source             | Pick a screen, window, or browser tab                             | Primary screen, or camera only                                            |
-| Screen, camera, and voice | Yes, with browser permissions                                     | Yes, with system permissions                                              |
-| Camera shapes             | Eight shapes, with live size and position controls                | Eight shapes and a floating webcam bubble                                 |
-| Pause and resume          | In the recording studio                                           | Floating toolbar and global shortcuts                                     |
-| Video output              | Preview and download an MP4 or WebM, depending on browser support | Saved to your Videos/Kadr folder                                          |
-| Install required          | No                                                                | Windows, macOS, or Linux                                                  |
+|                           | Web recorder                                                      | Desktop app                                                        |
+| ------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Get started               | [Open in your browser](https://bilimgram.github.io/kadr/)         | [Download for your OS](https://bilimgram.github.io/kadr/#download) |
+| Screen source             | Pick a screen, window, or browser tab                             | Primary screen, or camera only                                     |
+| Screen, camera, and voice | Yes, with browser permissions                                     | Yes, with system permissions                                       |
+| Camera shapes             | Eight shapes, with live size and position controls                | Eight shapes and a floating webcam bubble                          |
+| Pause and resume          | In the recording studio                                           | Floating toolbar and global shortcuts                              |
+| Video output              | Preview and download an MP4 or WebM, depending on browser support | Saved to your Videos/Kadr folder                                   |
+| Install required          | No                                                                | Windows, macOS, or Linux                                           |
 
 System/tab audio depends on the platform and capture source. In a supported browser, enable audio
 in the browser’s sharing dialog when available. Desktop system audio currently targets Windows.
 Preview desktop builds may be unsigned; see the [installation guide](docs/USER_GUIDE.md#install).
+
+The [desktop download section](https://bilimgram.github.io/kadr/#download) checks the latest
+published version when opened. Choose Windows, macOS, or Linux; Mac users can select Apple silicon
+or Intel, and Linux users can select AppImage or Debian / Ubuntu. Buttons download the installer
+directly, without taking you through a developer release page.
 
 ## Your video stays yours
 

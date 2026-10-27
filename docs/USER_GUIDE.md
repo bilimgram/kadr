@@ -6,7 +6,7 @@ no account and nothing is uploaded. See also the [FAQ](#faq) and [privacy statem
 ## Install
 
 Download the file for your system from the
-[latest release](https://github.com/bilimgram/kadr/releases/latest), or skip installing and
+[latest release](https://bilimgram.github.io/kadr/#download), or skip installing and
 [use Kadr in your browser](https://bilimgram.github.io/kadr/).
 
 ### Windows 10 and 11

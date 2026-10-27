@@ -38,8 +38,8 @@ import {
   VideoOff,
 } from "lucide-react";
 import { type PointerEvent, useEffect, useRef, useState } from "react";
+import { DOWNLOADS } from "./links";
 import { elapsedMs, type RecorderTiming, useCompositeRecorder } from "./useCompositeRecorder";
-import { DOWNLOADS } from "./WebsiteSections";
 
 const icon = { className: "k-icon", "aria-hidden": true } as const;
 const BUBBLE_MOVEMENT: Readonly<Record<string, { x: number; y: number }>> = {
