@@ -42,7 +42,26 @@ Download the file for your system from the
 
 On macOS, quit and reopen Kadr after granting screen recording.
 
-## Your first recording
+## Record in your browser
+
+Open [Kadr’s recording studio](https://bilimgram.github.io/kadr/#studio) in a recent desktop
+version of Chrome or Edge. Mobile screen capture is generally not supported.
+
+1. Choose **Screen + camera** or **Screen only** and turn **Microphone** on or off.
+2. Optionally open **Customize your recording** for camera shapes, size, mirroring, and countdown.
+3. Press **Start recording**, then choose the tab, window, or screen in your browser’s sharing dialog.
+   If the browser offers tab/system audio, select it there when you want to include it.
+4. Allow the selected camera and microphone when prompted. Kadr shows a warning if either is unavailable.
+5. After the countdown, use **Pause**, **Resume**, and **Finish recording**. Drag the camera bubble
+   in the preview, or focus the preview and use the arrow keys to move it.
+6. Watch your video and choose **Download video**. You can then share the file using your preferred app.
+
+Browser videos stay in memory until downloaded. Save the file before leaving or refreshing the
+page: Kadr does not keep a cloud copy. Before starting another video, download the current one;
+expand **Settings for your next video** if you want different camera or microphone options.
+Long recordings are limited by your device’s available memory.
+
+## Your first desktop recording
 
 1. Open Kadr. A small control panel appears in the top-right corner, and your camera bubble in the
    bottom-left. Closing the panel keeps Kadr running in the tray (menu bar on macOS).

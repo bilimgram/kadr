@@ -1,133 +1,130 @@
 <div align="center">
-
-<img src="docs/assets/logo.svg" alt="" width="96" height="96" />
-
-# Kadr
-
-**The open-source, local-first screen recorder.**<br/>
-Record your screen with a live webcam bubble in any shape. No account, no upload, no watermark —
-your recordings never leave your computer unless you share them.
-
-[![CI](https://github.com/bilimgram/kadr/actions/workflows/ci.yml/badge.svg)](https://github.com/bilimgram/kadr/actions/workflows/ci.yml)
-[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/bilimgram/kadr/badge)](https://scorecard.dev/viewer/?uri=github.com/bilimgram/kadr)
-[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
-
-[**Try it in your browser**](https://bilimgram.github.io/kadr/) ·
-[Download](https://github.com/bilimgram/kadr/releases/latest) ·
-[User guide](docs/USER_GUIDE.md) ·
-[Roadmap](docs/PLAN.md) ·
-[Contributing](CONTRIBUTING.md) ·
-[Discussions](https://github.com/bilimgram/kadr/discussions)
-
+  <img src="docs/assets/logo.svg" alt="Kadr" width="80" height="80" />
+  <h1>Kadr</h1>
+  <p><strong>Show it. Make it click.</strong></p>
+  <p>A free, open-source screen recorder for walkthroughs, quick updates, and clearer ideas.<br />Your screen, your camera, your voice — and a video file you control.</p>
+  <p><a href="https://bilimgram.github.io/kadr/"><strong>Record a video →</strong></a> · <a href="https://github.com/bilimgram/kadr/releases/latest">Get the desktop app</a> · <a href="docs/USER_GUIDE.md">User guide</a></p>
+  <p><a href="https://github.com/bilimgram/kadr/actions/workflows/ci.yml"><img src="https://github.com/bilimgram/kadr/actions/workflows/ci.yml/badge.svg" alt="CI" /></a> <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-7050e8" alt="Apache 2.0 license" /></a> <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/contributions-welcome-258168" alt="Contributions welcome" /></a></p>
 </div>
 
+![Kadr’s recording studio: choose screen and camera, set your microphone, and start recording](docs/assets/web-recorder.jpg)
+
+## From “quick question” to “got it”
+
+Show a teammate how something works. Walk a customer through a fix. Give feedback with context.
+Kadr makes it easy to record an explanation and take the video wherever you work.
+
+- **No sign-up.** Open the [web recorder](https://bilimgram.github.io/kadr/) and start.
+- **No watermark.** Your video stays about your message.
+- **No automatic upload.** Recording happens on your device; you choose where the file goes next.
+- **Open source.** Inspect the code, contribute, or build on it under Apache 2.0.
+
 > [!NOTE]
-> Kadr is in **early preview**. The recorder works today; editing, AI and sharing are on the
-> [roadmap](docs/PLAN.md). It's a great time to shape the project — see [how to help](#contributing).
+> **Early preview.** Screen recording works today. Hosted video links, trimming, captions, and AI
+> editing are planned. Kadr is building a local-first alternative to cloud screen recorders;
+> it does not yet include their full collaboration and editing features.
 
-## Why Kadr
+## Your first video
 
-Async video replaced a lot of meetings, but the popular tools are closed, cloud-first and
-subscription-gated. Kadr is the alternative we wanted:
+1. Open [Kadr in your browser](https://bilimgram.github.io/kadr/) on a computer using Chrome or Edge.
+2. Choose **Screen + camera** or **Screen only**, then turn your **Microphone** on or off.
+3. Press **Start recording**. In your browser’s dialog, choose a tab, window, or screen.
+4. Talk it through. **Pause** whenever you need a moment, then choose **Finish recording**.
+5. Watch the preview and **Download video**. Attach the file to a message or upload it to your preferred storage.
 
-- **Local-first.** Recording, saving and (soon) editing work fully offline. Files are plain MP4/WebM
-  on your disk.
-- **Private by design.** No account, no telemetry, nothing uploaded. When sharing ships,
-  it goes to storage _you_ choose (S3, R2, MinIO) or a server you host.
-- **Bring your own AI.** Planned AI editing uses your own API key (Anthropic, OpenAI, Google,
-  OpenRouter) or runs locally (whisper.cpp, Ollama). No markup, no lock-in.
-- **Open.** Apache-2.0, a documented project format, and no features held back from the open-source
-  core ([ADR-0003](docs/adr/0003-license-and-open-core.md)).
+Open **Customize your recording** to change the camera shape, bubble size, mirror setting, or countdown.
+During recording, drag the bubble in the preview or focus the preview and use the arrow keys to move it.
 
-## Features
+**Save before you leave.** Browser recordings are held locally in memory until you download them.
+Closing or refreshing the page can lose an unsaved video. No cloud copy is kept. Recording length
+depends on your device’s available memory; use shorter takes for important material.
 
-**Available now**
+## Choose your workspace
 
-- 🎥 **Screen + camera + mic** — record your screen, or just your camera; system audio on Windows.
-  In the browser, pick any screen, window or tab.
-- 🫧 **Live webcam bubble in your shape** — circle, squircle, rounded square, hexagon, heart, blob,
-  16:9 card or 9:16 portrait; small, medium or large; drag it anywhere.
-- ✨ **Automatic light correction** — GPU "touch-up" meters your face and brightens underexposed
-  video (even against a bright window) without blowing out highlights.
-- ⏱️ **3-2-1 countdown** with sound, so you're ready before the first frame.
-- 🎛️ **Floating controls** — stop, pause/resume, restart, discard, mute mic, hide camera; the toolbar
-  and countdown are excluded from the recording.
-- ⌨️ **Global shortcuts** and a tray icon; the control panel stays out of your way.
-- 🔄 **Automatic updates** on the desktop (stable and beta channels), never during a recording.
-- 🌐 **Web recorder** — the same bubble, right in your browser, no install.
+|                           | Web recorder                                                      | Desktop app                                                               |
+| ------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Get started               | [Open in your browser](https://bilimgram.github.io/kadr/)         | [Download for your OS](https://github.com/bilimgram/kadr/releases/latest) |
+| Screen source             | Pick a screen, window, or browser tab                             | Primary screen, or camera only                                            |
+| Screen, camera, and voice | Yes, with browser permissions                                     | Yes, with system permissions                                              |
+| Camera shapes             | Eight shapes, with live size and position controls                | Eight shapes and a floating webcam bubble                                 |
+| Pause and resume          | In the recording studio                                           | Floating toolbar and global shortcuts                                     |
+| Video output              | Preview and download an MP4 or WebM, depending on browser support | Saved to your Videos/Kadr folder                                          |
+| Install required          | No                                                                | Windows, macOS, or Linux                                                  |
 
-**On the roadmap** ([full plan](docs/PLAN.md))
+System/tab audio depends on the platform and capture source. In a supported browser, enable audio
+in the browser’s sharing dialog when available. Desktop system audio currently targets Windows.
+Preview desktop builds may be unsigned; see the [installation guide](docs/USER_GUIDE.md#install).
 
-- Native capture and encoding core in Rust (higher quality, lower CPU, cursor effects)
-- Separate tracks, so you can move, resize or hide the bubble after recording
-- Editor: trim, cut, zoom, captions, chapters
-- AI auto-editing: remove silences, filler words and retakes; add captions, titles and chapters
-- One-click sharing to your own bucket, and an optional self-hosted Kadr Server for teams
+## Your video stays yours
 
-## Get Kadr
+Kadr’s recorder does not require an account, upload your recording, or add telemetry. Browser
+recordings become local downloads; desktop recordings are saved to your Videos folder. Share a
+file through an app you already trust.
 
-| Platform                  | How                                                                                                                                  |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| **Browser**               | Open [bilimgram.github.io/kadr](https://bilimgram.github.io/kadr/) in Chrome or Edge (others: best effort).                          |
-| **Windows, macOS, Linux** | Download the [latest release](https://github.com/bilimgram/kadr/releases/latest) — see the [user guide](docs/USER_GUIDE.md#install). |
-| **From source**           | See [Development](#development) below.                                                                                               |
+The web app needs to load from its host. Source-code, download, and community links go to GitHub;
+the Bilimgram link goes to our website. Recordings are not sent to those services.
+See [PRIVACY.md](PRIVACY.md) for details.
 
-## Contributing
+## What’s next
 
-Kadr is built in the open and contributions of every size are welcome — code, design, docs,
-translations, testing on your hardware, or just telling us what's missing.
+The goal is a complete, approachable recording experience with the freedom of local files.
+The [roadmap](docs/PLAN.md) tracks the work:
 
-1. Browse [**good first issues**](https://github.com/bilimgram/kadr/labels/good%20first%20issue) and
-   [**help wanted**](https://github.com/bilimgram/kadr/labels/help%20wanted), or say hi in
-   [Discussions](https://github.com/bilimgram/kadr/discussions).
-2. Read [CONTRIBUTING.md](CONTRIBUTING.md) — setup takes a few minutes, and every commit is signed off
-   under the [DCO](https://developercertificate.org/) (no CLA).
-3. Bigger ideas start as a Discussion or an [ADR](docs/adr/README.md), so we can design them together.
+- Trimming, captions, and a visual editor.
+- AI-assisted editing using your own provider key or local models.
+- Separate screen and camera tracks for editing after recording.
+- Sharing to storage you control, plus optional team services.
+- A native Rust capture and encoding backend.
 
-Areas where help makes the biggest difference right now: the Rust capture core
-([`crates/kadr-native`](crates/kadr-native)), the editor, AI editing
-([`packages/ai-editor`](packages/ai-editor)), macOS and Linux testing, and accessibility.
+These are planned capabilities, not features available in the current recorder.
+Have a priority? [Start a discussion](https://github.com/bilimgram/kadr/discussions).
 
-Please follow our [Code of Conduct](CODE_OF_CONDUCT.md). Report security issues privately — see
-[SECURITY.md](SECURITY.md).
+## Develop locally
 
-## Development
-
-Requirements: Node.js ≥ 22.12 (24 recommended), pnpm via Corepack, and Rust only for `crates/`.
-On Windows, clone into a short path (e.g. `C:\dev\kadr`) or enable long paths.
+You’ll need Node.js ≥ 22.12 (24 recommended) and the pnpm version pinned in `package.json`.
+Rust is only needed for work in `crates/`. A short checkout path helps on Windows.
 
 ```bash
-git clone https://github.com/bilimgram/kadr.git && cd kadr
+git clone https://github.com/bilimgram/kadr.git
+cd kadr
 corepack enable
-corepack pnpm install
+corepack pnpm install --frozen-lockfile
+corepack pnpm dev:web       # http://localhost:5173
 corepack pnpm dev:desktop   # Electron app
-corepack pnpm dev:web       # web recorder at http://localhost:5173
-corepack pnpm check         # lint + typecheck + tests
 ```
 
-More in the [development guide](docs/DEVELOPMENT.md), [architecture](docs/ARCHITECTURE.md) and
-[release process](docs/RELEASING.md).
+```bash
+corepack pnpm check         # lint, typechecks, and tests
+corepack pnpm build         # production builds
+```
 
-### Repository layout
+The [development guide](docs/DEVELOPMENT.md) covers debugging, toolchains, and packaging.
+The [Pages workflow](.github/workflows/pages.yml) builds the web app under `/kadr/`
+and deploys it when relevant changes reach `main`.
 
-| Path                                                 | What                                                                                   |
-| ---------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| [`apps/desktop`](apps/desktop)                       | Electron desktop app (sandboxed renderers, typed and validated IPC)                    |
-| [`apps/web`](apps/web)                               | Browser recorder (static web app)                                                      |
-| [`packages/compositor`](packages/compositor)         | Bubble shapes, layout math, GPU light correction, canvas compositor                    |
-| [`packages/project-format`](packages/project-format) | Recording bundle, events, transcript and edit-plan schemas (public format)             |
-| [`packages/recorder-core`](packages/recorder-core)   | Browser recording primitives                                                           |
-| [`packages/ai-editor`](packages/ai-editor)           | Provider-agnostic AI editing                                                           |
-| [`packages/ui`](packages/ui)                         | Design tokens and shared React components                                              |
-| [`crates/kadr-native`](crates/kadr-native)           | Rust native core (napi-rs)                                                             |
-| [`docs`](docs)                                       | [Plan](docs/PLAN.md), [architecture](docs/ARCHITECTURE.md), [ADRs](docs/adr/README.md) |
+| Path                                                 | Purpose                                              |
+| ---------------------------------------------------- | ---------------------------------------------------- |
+| [`apps/web`](apps/web)                               | Public homepage and browser recording studio         |
+| [`apps/desktop`](apps/desktop)                       | Electron app, floating controls, native integrations |
+| [`packages/compositor`](packages/compositor)         | Bubble shapes, canvas composition, light correction  |
+| [`packages/recorder-core`](packages/recorder-core)   | Capture, audio mixing, and recording primitives      |
+| [`packages/project-format`](packages/project-format) | Public recording and edit-plan schemas               |
+| [`packages/ai-editor`](packages/ai-editor)           | Early AI edit-plan logic                             |
+| [`packages/ui`](packages/ui)                         | Shared accessible controls and theme                 |
+| [`crates/kadr-native`](crates/kadr-native)           | Native capture backend scaffold                      |
 
-Built with TypeScript, React, Electron, WebGL2 and Rust; tested with Vitest; checked by Biome, CodeQL
-and OpenSSF Scorecard.
+## Build it with us
+
+Code, design, documentation, accessibility, and testing on different systems all help.
+Read [CONTRIBUTING.md](CONTRIBUTING.md), browse
+[good first issues](https://github.com/bilimgram/kadr/labels/good%20first%20issue),
+or tell us what could be easier in [Discussions](https://github.com/bilimgram/kadr/discussions).
+Sign off commits with `git commit -s`; contributors use the DCO rather than a CLA.
+
+Follow our [Code of Conduct](CODE_OF_CONDUCT.md). Report security issues privately using
+[SECURITY.md](SECURITY.md).
 
 ## License
 
-[Apache-2.0](LICENSE) © The Kadr Authors. See [NOTICE](NOTICE) for attributions and
-[PRIVACY.md](PRIVACY.md) for what Kadr does (and doesn't do) with your data. Kadr is developed by
-[Bilimgram](https://bilimgram.uz) and contributors. "Kadr" means "frame" in Uzbek.
+[Apache-2.0](LICENSE) © The Kadr Authors. See [NOTICE](NOTICE) for attributions.
+Built by [Bilimgram](https://bilimgram.uz) and contributors. “Kadr” means “frame” in Uzbek.

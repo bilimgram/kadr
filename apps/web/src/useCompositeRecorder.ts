@@ -8,6 +8,7 @@ import {
   TrackRecorder,
 } from "@kadr/recorder-core";
 import { type RefObject, useCallback, useEffect, useRef, useState } from "react";
+import { requestUserMedia } from "./requestUserMedia";
 
 export type WebRecorderStatus =
   | "idle"
@@ -74,11 +75,12 @@ export function elapsedMs(timing: RecorderTiming, now: number): number {
 export function useCompositeRecorder(
   canvasRef: RefObject<HTMLCanvasElement | null>,
   layout: BubbleLayout,
-  options: { withCamera: boolean; countdownSeconds: number },
+  options: { withCamera: boolean; withMicrophone: boolean; countdownSeconds: number },
 ) {
   const [status, setStatus] = useState<WebRecorderStatus>("idle");
   const [result, setResult] = useState<RecordingResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [timing, setTiming] = useState<RecorderTiming>(IDLE_TIMING);
   const layoutRef = useRef(layout);
   layoutRef.current = layout;
@@ -158,7 +160,7 @@ export function useCompositeRecorder(
     if (!canvas || session.current) return;
     setStatus("starting");
     setError(null);
-    setResult(null);
+    setWarning(null);
 
     const streams: MediaStream[] = [];
     try {
@@ -178,18 +180,22 @@ export function useCompositeRecorder(
       }
       streams.push(screen);
 
-      const camera = await navigator.mediaDevices
-        .getUserMedia({
-          video: options.withCamera ? { width: { ideal: 1280 }, height: { ideal: 720 } } : false,
-          audio: { echoCancellation: true, noiseSuppression: true },
-        })
-        .catch(() => null);
+      const camera = await requestUserMedia(
+        (constraints) => navigator.mediaDevices.getUserMedia(constraints),
+        options,
+      );
       if (camera) streams.push(camera);
 
       const screenTrack = screen.getVideoTracks()[0];
       if (!screenTrack) throw new Error("No screen video track");
       const screenVideo = await playStream(new MediaStream([screenTrack]));
       const cameraTrack = camera?.getVideoTracks()[0];
+      const missing: string[] = [];
+      if (options.withCamera && !cameraTrack)
+        missing.push("Camera unavailable — recording your screen without a camera bubble.");
+      if (options.withMicrophone && !camera?.getAudioTracks().length)
+        missing.push("Microphone unavailable — your voice will not be recorded.");
+      if (missing.length) setWarning(missing.join(" "));
       const cameraVideo = cameraTrack ? await playStream(new MediaStream([cameraTrack])) : null;
 
       Object.assign(canvas, outputSize(screenTrack));
@@ -221,6 +227,8 @@ export function useCompositeRecorder(
       const recorder = new TrackRecorder(output, { videoBitsPerSecond: 8_000_000 });
 
       session.current = { recorder, stopLoop, streams, audio };
+      // Keep the previous preview if the browser's sharing dialog is cancelled.
+      setResult(null);
       screenTrack.addEventListener("ended", () => void stopRef.current(), { once: true });
 
       if (options.countdownSeconds > 0) setStatus("countdown");
@@ -237,7 +245,7 @@ export function useCompositeRecorder(
       );
       setStatus("idle");
     }
-  }, [canvasRef, options.withCamera, options.countdownSeconds, begin]);
+  }, [canvasRef, options.withCamera, options.withMicrophone, options.countdownSeconds, begin]);
 
-  return { status, timing, result, error, prepare, begin, cancel, pause, resume, stop };
+  return { status, timing, result, error, warning, prepare, begin, cancel, pause, resume, stop };
 }

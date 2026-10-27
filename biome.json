@@ -7,7 +7,16 @@
     "defaultBranch": "main"
   },
   "files": {
-    "includes": ["**", "!**/dist", "!**/out", "!**/coverage", "!**/.turbo", "!**/target"]
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/out",
+      "!**/coverage",
+      "!**/.turbo",
+      "!**/target",
+      "!pnpm-lock.yaml",
+      "!.changeset/*.md"
+    ]
   },
   "formatter": {
     "enabled": true,
