@@ -1,0 +1,178 @@
+/* Web app layout. Tokens and shared components come from @kadr/ui/theme.css. */
+
+.app {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+}
+
+.app__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 16px;
+  margin-bottom: 20px;
+}
+
+.app__tagline {
+  margin: 0;
+  color: var(--k-text-muted);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: var(--k-text-xl);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.brand__mark {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 50% 50%, #ffffff 0 4px, transparent 4.5px),
+    linear-gradient(135deg, #7c5cff, #ff5c8a);
+}
+
+.app__main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  align-items: start;
+  gap: 16px;
+}
+
+@media (max-width: 860px) {
+  .app__main {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 360px;
+  border-radius: var(--k-radius-lg);
+  border: 1px solid var(--k-border);
+  background: #07080b;
+  overflow: hidden;
+}
+
+.stage__canvas,
+.stage__video {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: none;
+}
+
+/* The display rule above would otherwise override the `hidden` attribute. */
+.stage__canvas[hidden] {
+  display: none;
+}
+
+.stage__overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(7 8 11 / 0.55);
+}
+
+.stage__empty {
+  width: 100%;
+}
+
+.stage__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 48px 24px;
+  color: #a3abbd;
+  text-align: center;
+}
+
+.stage__placeholder p {
+  margin: 0;
+}
+
+.stage__placeholder-icon {
+  width: 40px;
+  height: 40px;
+  color: #737c90;
+}
+
+.stage__placeholder-title {
+  font-size: var(--k-text-lg);
+  font-weight: 700;
+  color: #eef0f5;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.panel__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.rec-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.rec-status__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--k-danger);
+  animation: rec-pulse 1.4s ease-in-out infinite;
+}
+
+.rec-status--paused .rec-status__dot {
+  background: #f5b84a;
+  animation: none;
+}
+
+.rec-status__time {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes rec-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.record-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--k-danger);
+  box-shadow: 0 0 0 2px #ffffff;
+}
+
+.download-link {
+  align-self: flex-start;
+  margin-top: 6px;
+  text-decoration: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rec-status__dot {
+    animation: none;
+  }
+}

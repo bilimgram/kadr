@@ -1,0 +1,50 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please **do not** report security vulnerabilities here — see SECURITY.md.
+  - type: dropdown
+    id: app
+    attributes:
+      label: App
+      options: [Desktop, Web, Other]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: e.g. 0.1.0 (Settings → About)
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: OS and hardware
+      placeholder: e.g. Windows 11 24H2, Intel i5-1235U, 2 monitors
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the control bar
+        2. Choose the hexagon bubble
+        3. Start recording
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Remove anything private. Never attach recordings that contain sensitive information.

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(corepack pnpm install*)",
+      "Bash(corepack pnpm check*)",
+      "Bash(corepack pnpm lint*)",
+      "Bash(corepack pnpm typecheck*)",
+      "Bash(corepack pnpm test*)",
+      "Bash(corepack pnpm build*)",
+      "Bash(corepack pnpm changeset*)",
+      "Bash(corepack pnpm --filter *)",
+      "Bash(corepack pnpm exec biome *)",
+      "Bash(corepack pnpm exec vitest *)",
+      "Bash(corepack pnpm exec tsc *)",
+      "Bash(cargo fmt *)",
+      "Bash(cargo clippy *)",
+      "Bash(cargo check *)",
+      "Bash(cargo build *)",
+      "Bash(cargo test *)",
+      "Bash(git status*)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(git branch*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./**/*.pem)",
+      "Read(./**/*.key)",
+      "Read(./**/*.p12)",
+      "Read(./**/*.pfx)",
+      "Read(./**/*.provisionprofile)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean -f*)",
+      "Bash(git filter-branch*)"
+    ]
+  }
+}

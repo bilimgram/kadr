@@ -1,0 +1,30 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Single source of truth for versions shared across packages; reference them as "catalog:".
+catalog:
+  "@types/node": ^26.6.5
+  "@types/react": ^19.3.0
+  "@types/react-dom": ^19.3.0
+  "@vitejs/plugin-react": ^6.1.2
+  lucide-react: ^1.61.0
+  react: ^19.3.1
+  react-dom: ^19.3.1
+  typescript: ^7.0.2
+  vite: ^8.3.5
+  vitest: ^5.0.5
+  zod: ^4.6.7
+
+# Flat node_modules: recommended by electron-builder for pnpm, and keeps paths short enough for
+# Windows' 260-character MAX_PATH limit in deeply nested checkouts.
+nodeLinker: hoisted
+
+# Supply chain: don't install versions published less than a day ago (time for malicious releases
+# to be caught and yanked), and block dependency build scripts unless allowed here.
+minimumReleaseAge: 1440
+allowBuilds:
+  # Only used for Squirrel installers, which we don't ship.
+  electron-winstaller: false
+  # Git hooks are installed by scripts/install-git-hooks.mjs instead of a postinstall script.
+  lefthook: false

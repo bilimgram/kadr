@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+out/
+release/
+target/
+*.node
+*.tsbuildinfo
+
+# Tooling
+.turbo/
+coverage/
+.vite/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Personal Claude Code overrides (the shared config in .claude/settings.json is committed)
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Temporary files
+*.tmp

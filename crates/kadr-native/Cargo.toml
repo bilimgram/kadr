@@ -1,0 +1,21 @@
+[package]
+name = "kadr-native"
+version = "0.0.0"
+description = "Kadr native core: screen capture, compositing, encoding and input hooks, exposed to Node via napi-rs."
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+napi = "3"
+napi-derive = "3"
+
+[build-dependencies]
+napi-build = "2"
+
+[lints]
+workspace = true

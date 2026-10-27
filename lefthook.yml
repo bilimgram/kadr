@@ -1,0 +1,18 @@
+# Git hooks (https://lefthook.dev), installed on `pnpm install` by scripts/install-git-hooks.mjs.
+# Fast checks only; CI runs the full suite. Skip in an emergency with `git commit --no-verify`.
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: biome
+      glob: "*.{js,jsx,ts,tsx,mjs,cjs,json,jsonc,css,md}"
+      run: corepack pnpm exec biome check --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+      stage_fixed: true
+    - name: rustfmt
+      glob: "*.rs"
+      run: cargo fmt --all -- --check
+
+commit-msg:
+  jobs:
+    - name: conventional-commit
+      run: node scripts/check-commit-msg.mjs {1}

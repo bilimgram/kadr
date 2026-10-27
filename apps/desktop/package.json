@@ -1,0 +1,44 @@
+{
+  "name": "@kadr/desktop",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Kadr desktop app: screen recorder with a live, shaped webcam bubble.",
+  "license": "Apache-2.0",
+  "author": "The Kadr Authors",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "node scripts/ensure-electron.cjs && electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "node scripts/ensure-electron.cjs && electron-vite preview",
+    "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.web.json",
+    "test": "vitest run",
+    "dist": "electron-vite build && electron-builder --config electron-builder.config.mjs --publish never",
+    "dist:dir": "electron-vite build && electron-builder --config electron-builder.config.mjs --publish never --dir",
+    "publish:update": "node scripts/publish-update.mjs",
+    "release": "pnpm run dist && pnpm run publish:update"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-s3": "^3.1156.0",
+    "@kadr/compositor": "workspace:*",
+    "@kadr/project-format": "workspace:*",
+    "@kadr/recorder-core": "workspace:*",
+    "@kadr/ui": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "electron": "^45.0.0",
+    "electron-builder": "^26.18.0",
+    "electron-vite": "^6.0.0",
+    "lucide-react": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:",
+    "yaml": "^2.9.1",
+    "zod": "catalog:"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
+  }
+}

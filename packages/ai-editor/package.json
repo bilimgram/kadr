@@ -1,0 +1,19 @@
+{
+  "name": "@kadr/ai-editor",
+  "version": "0.0.0",
+  "description": "Provider-agnostic AI editing for Kadr: context building, heuristics and edit-plan validation.",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@kadr/project-format": "workspace:*"
+  }
+}

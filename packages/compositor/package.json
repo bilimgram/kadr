@@ -1,0 +1,20 @@
+{
+  "name": "@kadr/compositor",
+  "version": "0.0.0",
+  "description": "Bubble shapes, layout math and a canvas compositor for Kadr recordings.",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./shapes": "./src/shapes.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@kadr/project-format": "workspace:*"
+  }
+}

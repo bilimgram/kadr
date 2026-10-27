@@ -1,0 +1,16 @@
+# Normalize line endings so Windows, macOS and Linux contributors produce identical diffs.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.icns binary
+*.mp4 binary
+*.webm binary
+*.m4a binary
+*.node binary
+
+# Generated files: collapse in diffs and exclude from language stats.
+pnpm-lock.yaml linguist-generated=true -diff
+Cargo.lock linguist-generated=true
+docs/** linguist-documentation

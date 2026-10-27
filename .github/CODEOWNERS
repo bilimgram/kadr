@@ -1,0 +1,15 @@
+# Code owners per area (see GOVERNANCE.md). Security-sensitive paths need two approvals.
+# "@kadr-dev/..." teams are placeholders — replace with the real GitHub organization and teams.
+
+*                           @kadr-dev/maintainers
+
+/apps/desktop/src/main/     @kadr-dev/desktop @kadr-dev/security
+/apps/desktop/src/preload/  @kadr-dev/desktop @kadr-dev/security
+/apps/desktop/electron-builder.config.mjs @kadr-dev/desktop @kadr-dev/security
+/apps/desktop/scripts/       @kadr-dev/desktop @kadr-dev/security
+/apps/web/                  @kadr-dev/web
+/packages/project-format/   @kadr-dev/format
+/packages/ai-editor/        @kadr-dev/ai
+/crates/                    @kadr-dev/native
+/.github/                   @kadr-dev/security
+/docs/adr/                  @kadr-dev/maintainers
