@@ -61,6 +61,12 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
+          # Missing secrets arrive as empty strings, which electron-builder reads as "configured"
+          # (an empty CSC_LINK resolves to the project folder). Unset them to build unsigned.
+          for var in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID \
+            AZURE_TENANT_ID AZURE_CLIENT_ID AZURE_CLIENT_SECRET; do
+            [ -n "${!var}" ] || unset "$var"
+          done
           pnpm --filter @kadr/desktop dist 2>&1 | tee "$RUNNER_TEMP/dist.log"
         env:
           # macOS signing + notarization (Apple Developer ID); unsigned when absent.
