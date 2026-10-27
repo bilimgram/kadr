@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { app, globalShortcut, systemPreferences } from "electron";
 import { Channels } from "../shared/api";
+import { handleDisplayCapture } from "./capture";
 import { recoverRenderer } from "./crash-recovery";
 import { registerIpc } from "./ipc";
 import { applyOpenAtLogin, launchedAtLogin } from "./login-item";
@@ -75,6 +76,7 @@ app.whenReady().then(async () => {
   await windowState.load();
   windows = new WindowManager(windowState);
   const session = new SessionCoordinator(windows, settings);
+  handleDisplayCapture(devServerUrl, () => session.captureDisplayId());
 
   const shortcuts = registerShortcuts({
     startStop: () => session.toggleStartStop(),

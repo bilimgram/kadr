@@ -1,6 +1,6 @@
 {
   "name": "@kadr/web",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Kadr web app: browser screen recorder with a live composited webcam bubble.",
   "license": "Apache-2.0",

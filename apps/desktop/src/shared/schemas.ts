@@ -24,6 +24,9 @@ export const RecordingMode = z.enum(["screenAndCamera", "screen", "camera"]);
 
 export const CountdownSeconds = z.union([z.literal(0), z.literal(3), z.literal(5)]);
 
+/** What part of the screen a screen recording captures. */
+export const CaptureArea = z.enum(["fullScreen", "region"]);
+
 export const RecordingSettings = z.object({
   mode: RecordingMode,
   countdownSeconds: CountdownSeconds,
@@ -32,6 +35,9 @@ export const RecordingSettings = z.object({
   microphoneDeviceId: z.string().max(512).optional(),
   /** System audio loopback (Windows only for now). */
   systemAudio: z.boolean(),
+  captureArea: CaptureArea,
+  /** Put each finished recording on the clipboard, ready to paste into a chat or a folder. */
+  copyToClipboard: z.boolean(),
 });
 
 export const ThemePreference = z.enum(["light", "dark", "system"]);
@@ -88,6 +94,8 @@ export const RecordingResult = z.object({
   path: FilePath,
   durationMs: z.number().nonnegative(),
   sizeBytes: z.number().int().nonnegative(),
+  /** Whether the file is on the clipboard. */
+  copied: z.boolean(),
 });
 
 export const SessionSnapshot = z.object({
@@ -161,6 +169,38 @@ export const ScreenCoordinate = z.number().int().min(-100_000).max(100_000);
 
 export const PanelHeight = z.number().int().min(40).max(1200);
 
+const ScreenLength = z.number().int().min(1).max(100_000);
+
+export const ScreenRect = z.object({
+  x: ScreenCoordinate,
+  y: ScreenCoordinate,
+  width: ScreenLength,
+  height: ScreenLength,
+});
+
+/** An area on one display, in global DIPs (see src/shared/region.ts). */
+export const Region = ScreenRect.extend({
+  displayId: z.number().int(),
+});
+
+/** The area the user picked, with the bounds of its display, for cropping the capture. */
+export const RegionSelection = z.object({
+  displayId: z.number().int(),
+  display: ScreenRect,
+  area: ScreenRect,
+});
+
+/** What one region picker overlay needs to know about the display it covers. */
+export const RegionContext = z.object({
+  displayId: z.number().int(),
+  /** The display's bounds in global DIPs; the overlay covers exactly this. */
+  bounds: ScreenRect,
+  /** Device pixels per DIP. */
+  scaleFactor: z.number().positive(),
+  /** Where to start: the last recorded region, when it is on this display. */
+  selection: Region.nullable(),
+});
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -168,6 +208,7 @@ export const PanelHeight = z.number().int().min(40).max(1200);
 export type BubbleSizePreset = z.infer<typeof BubbleSizePreset>;
 export type DesktopBubbleSettings = z.infer<typeof DesktopBubbleSettings>;
 export type RecordingMode = z.infer<typeof RecordingMode>;
+export type CaptureArea = z.infer<typeof CaptureArea>;
 export type CountdownSeconds = z.infer<typeof CountdownSeconds>;
 export type RecordingSettings = z.infer<typeof RecordingSettings>;
 export type ThemePreference = z.infer<typeof ThemePreference>;
@@ -183,3 +224,7 @@ export type SessionCommand = z.infer<typeof SessionCommand>;
 export type CountdownConfig = z.infer<typeof CountdownConfig>;
 export type CountdownResult = z.infer<typeof CountdownResult>;
 export type RecordingExtension = z.infer<typeof RecordingExtension>;
+export type ScreenRect = z.infer<typeof ScreenRect>;
+export type Region = z.infer<typeof Region>;
+export type RegionSelection = z.infer<typeof RegionSelection>;
+export type RegionContext = z.infer<typeof RegionContext>;

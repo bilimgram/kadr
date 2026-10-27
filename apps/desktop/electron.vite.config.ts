@@ -17,6 +17,8 @@ export default defineConfig({
           bubble: page("bubble"),
           toolbar: page("toolbar"),
           countdown: page("countdown"),
+          region: page("region"),
+          frame: page("frame"),
         },
       },
     },

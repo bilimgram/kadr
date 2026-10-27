@@ -2,6 +2,7 @@ import type {
   AppSettings,
   AppSettingsPatch,
   BubbleSizePreset,
+  CaptureArea,
   CountdownConfig,
   CountdownResult,
   CountdownSeconds,
@@ -9,6 +10,9 @@ import type {
   RecordingExtension,
   RecordingMode,
   RecordingResult,
+  Region,
+  RegionContext,
+  RegionSelection,
   SessionCommand,
   SessionSnapshot,
   SessionStatus,
@@ -21,6 +25,7 @@ export type {
   AppSettings,
   AppSettingsPatch,
   BubbleSizePreset,
+  CaptureArea,
   CountdownConfig,
   CountdownResult,
   CountdownSeconds,
@@ -28,6 +33,9 @@ export type {
   RecordingExtension,
   RecordingMode,
   RecordingResult,
+  Region,
+  RegionContext,
+  RegionSelection,
   SessionCommand,
   SessionSnapshot,
   SessionStatus,
@@ -56,6 +64,13 @@ export const Channels = {
   shellShowInFolder: "shell:show-in-folder",
   shellOpenPath: "shell:open-path",
   shellOpenRecordings: "shell:open-recordings",
+  shellCopyFile: "shell:copy-file",
+  regionSelect: "region:select",
+  regionGetContext: "region:get-context",
+  regionUpdate: "region:update",
+  regionConfirm: "region:confirm",
+  regionCancel: "region:cancel",
+  regionChanged: "region:changed",
   windowSetIgnoreMouse: "window:set-ignore-mouse",
   windowMoveTo: "window:move-to",
   shortcutsGet: "shortcuts:get",
@@ -118,6 +133,22 @@ export interface KadrApi {
     showInFolder(path: string): Promise<void>;
     openPath(path: string): Promise<void>;
     openRecordingsFolder(): Promise<void>;
+    /** Put a recording on the clipboard as a file (pastes into chats, emails and folders). */
+    copyToClipboard(path: string): Promise<void>;
+  };
+  readonly region: {
+    /** Recording engine: let the user pick the area to record; null when they cancel. */
+    select(): Promise<RegionSelection | null>;
+    /** Region picker: the display this overlay covers and the area to start from. */
+    getContext(): Promise<RegionContext>;
+    /** Region picker: the selection changed (pickers on other displays clear theirs). */
+    update(region: Region | null): void;
+    /** Region picker: record this area. */
+    confirm(region: Region): void;
+    /** Region picker: give up (Esc). */
+    cancel(): void;
+    /** Region picker: the selection moved to another display, or was cleared. */
+    onChange(listener: (region: Region | null) => void): () => void;
   };
   readonly window: {
     /** Let clicks pass through transparent parts of floating windows. */

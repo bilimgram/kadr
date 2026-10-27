@@ -8,6 +8,8 @@
 | Bubble        | `bubble.html`    | Transparent, always on top, click-through outside the shape, JS drag. Shown while the panel is open or a session is active. |
 | Toolbar       | `toolbar.html`   | Recording controls, content-protected (excluded from capture).                                                              |
 | Countdown     | `countdown.html` | 3-2-1 overlay, content-protected.                                                                                           |
+| Region picker | `region.html`    | One per display while picking an area (`openRegionPicker`); the bubble stays above it.                                      |
+| Region frame  | `frame.html`     | Click-through, content-protected border just outside the recorded region.                                                   |
 
 `main/windows.ts` (`WindowManager`) owns every `BrowserWindow`; `main/session.ts`
 (`SessionCoordinator`) relays toolbar/tray/shortcut commands to the engine and choreographs windows
@@ -61,3 +63,10 @@ permissions or the protocol, and extend `e2e/smoke.e2e.ts` for new window behavi
   The "stays above another app's window" e2e test guards this with a real screen capture.
 - Bubble placement rules are pure (`src/shared/placement.ts`); positions persist in
   `window-state.json` (not settings, so drags don't broadcast settings changes).
+- Region geometry is pure (`src/shared/region.ts`: DIPs in the picker, even device pixels for the
+  crop). The main process owns the selection and answers `getDisplayMedia()` with the region's
+  display only (`main/capture.ts`); the engine crops with `VideoFrame.visibleRect`
+  (`control/crop.ts`, ADR 0007). A new window's `webContents.getURL()` is empty until it loads, so
+  e2e tests poll for it.
+- Files go on the clipboard as a `text/uri-list` `ClipboardItem` (`main/clipboard.ts`); Electron
+  writes the platform's file list (CF_HDROP on Windows), which chats and file managers paste.

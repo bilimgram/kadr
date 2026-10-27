@@ -8,6 +8,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
     countdownSound: true,
     microphoneEnabled: true,
     systemAudio: true,
+    captureArea: "fullScreen",
+    copyToClipboard: true,
   },
   appearance: { theme: "light" },
   updates: { channel: "stable", automatic: true },

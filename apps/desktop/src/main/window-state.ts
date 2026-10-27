@@ -4,9 +4,13 @@ import { dirname, join } from "node:path";
 import { app } from "electron";
 import { z } from "zod";
 import type { Point } from "../shared/placement";
+import type { DisplayRegion } from "../shared/region";
+import { Region } from "../shared/schemas";
 
 const WindowState = z.object({
   bubble: z.object({ x: z.number().int(), y: z.number().int() }).nullable(),
+  /** The last recorded region, offered again next time. */
+  region: Region.nullable().default(null),
 });
 type WindowState = z.infer<typeof WindowState>;
 
@@ -14,11 +18,12 @@ type WindowState = z.infer<typeof WindowState>;
 const SAVE_DELAY_MS = 400;
 
 /**
- * Where floating windows were left, kept apart from settings so a drag doesn't broadcast a
- * settings change to every window. Atomic writes (temp file + rename), like the settings store.
+ * Where floating windows were left and the last recorded region, kept apart from settings so a
+ * drag doesn't broadcast a settings change to every window. Atomic writes (temp file + rename),
+ * like the settings store.
  */
 export class WindowStateStore {
-  private state: WindowState = { bubble: null };
+  private state: WindowState = { bubble: null, region: null };
   private timer: NodeJS.Timeout | null = null;
 
   constructor(private readonly file = join(app.getPath("userData"), "window-state.json")) {}
@@ -36,13 +41,21 @@ export class WindowStateStore {
     return this.state.bubble;
   }
 
+  get region(): DisplayRegion | null {
+    return this.state.region;
+  }
+
   rememberBubble(position: Point): void {
     this.state = {
       ...this.state,
       bubble: { x: Math.round(position.x), y: Math.round(position.y) },
     };
-    if (this.timer) clearTimeout(this.timer);
-    this.timer = setTimeout(() => void this.save(), SAVE_DELAY_MS);
+    this.scheduleSave();
+  }
+
+  rememberRegion(region: DisplayRegion): void {
+    this.state = { ...this.state, region };
+    this.scheduleSave();
   }
 
   /** Writes a pending change before the app exits (quit can't wait for async work). */
@@ -58,6 +71,11 @@ export class WindowStateStore {
     } catch (error) {
       console.error("Failed to save window positions:", error);
     }
+  }
+
+  private scheduleSave(): void {
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = setTimeout(() => void this.save(), SAVE_DELAY_MS);
   }
 
   private async save(): Promise<void> {

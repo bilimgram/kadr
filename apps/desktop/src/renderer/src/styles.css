@@ -255,11 +255,58 @@ body.control-page {
   color: var(--k-text);
 }
 
-.result-name {
-  display: block;
+/* The recording that was just saved: one compact row with icon actions. */
+.saved {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 6px 6px 6px 12px;
+  border-radius: 14px;
+  background: var(--k-success-soft);
+  border: 1px solid color-mix(in srgb, var(--k-success) 30%, transparent);
+}
+
+.saved__icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--k-success);
+}
+
+.saved__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.saved__title,
+.saved__meta {
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.saved__title {
+  font-size: var(--k-text-sm);
   font-weight: 600;
-  color: var(--k-text);
-  word-break: break-all;
+}
+
+.saved__meta {
+  font-size: var(--k-text-xs);
+  color: var(--k-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.saved__actions {
+  display: flex;
+  flex: none;
+  gap: 2px;
+}
+
+.saved__copied,
+.saved__copied:hover:not(:disabled) {
+  color: var(--k-success);
 }
 
 .result-actions {
@@ -622,6 +669,278 @@ body.overlay-page {
   .toolbar__dot {
     animation: none;
   }
+}
+
+/* ---------- Region picker (one overlay per display) ---------- */
+
+.region-page {
+  /* Visible against any wallpaper or app; the selection cuts a hole in it. */
+  background: transparent;
+}
+
+.region {
+  position: fixed;
+  inset: 0;
+  background: rgb(8 10 16 / 0.32);
+  cursor: crosshair;
+  outline: none;
+  touch-action: none;
+}
+
+.region--selected {
+  background: transparent;
+}
+
+.region__guide {
+  position: absolute;
+  background: rgb(255 255 255 / 0.55);
+  pointer-events: none;
+}
+
+.region__guide--x {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.region__guide--y {
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+.region__selection {
+  position: absolute;
+  cursor: move;
+  /* The dimmed screen around the selection, and a crisp edge on light and dark content alike. */
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.95),
+    0 0 0 2px rgb(0 0 0 / 0.35),
+    0 0 0 200vmax rgb(8 10 16 / 0.5);
+}
+
+.region__size {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  padding: 3px 8px;
+  border-radius: var(--k-radius-sm);
+  background: var(--k-overlay);
+  color: #ffffff;
+  font-size: var(--k-text-xs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.region__size--inside {
+  top: 8px;
+  left: 8px;
+  bottom: auto;
+}
+
+.region__handle {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+}
+
+/* The visible handle is smaller than its hit area. */
+.region__handle::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 3px;
+  background: #ffffff;
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.35),
+    var(--k-shadow-sm);
+}
+
+.region__handle--nw {
+  left: 0;
+  top: 0;
+  cursor: nwse-resize;
+}
+.region__handle--n {
+  left: 50%;
+  top: 0;
+  cursor: ns-resize;
+}
+.region__handle--ne {
+  left: 100%;
+  top: 0;
+  cursor: nesw-resize;
+}
+.region__handle--e {
+  left: 100%;
+  top: 50%;
+  cursor: ew-resize;
+}
+.region__handle--se {
+  left: 100%;
+  top: 100%;
+  cursor: nwse-resize;
+}
+.region__handle--s {
+  left: 50%;
+  top: 100%;
+  cursor: ns-resize;
+}
+.region__handle--sw {
+  left: 0;
+  top: 100%;
+  cursor: nesw-resize;
+}
+.region__handle--w {
+  left: 0;
+  top: 50%;
+  cursor: ew-resize;
+}
+
+.region__hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: var(--k-radius-full);
+  background: var(--k-overlay);
+  border: 1px solid var(--k-overlay-border);
+  box-shadow: var(--k-shadow-lg);
+  color: #ffffff;
+  font-size: var(--k-text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.region__hint-keys {
+  color: rgb(255 255 255 / 0.6);
+  font-weight: 500;
+}
+
+.region-toolbar {
+  position: absolute;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100vw - 24px);
+  padding: 6px;
+  border-radius: var(--k-radius-lg);
+  background: var(--k-overlay);
+  border: 1px solid var(--k-overlay-border);
+  box-shadow: var(--k-shadow-lg);
+  backdrop-filter: blur(16px);
+  color: #ffffff;
+  cursor: default;
+}
+
+.region-toolbar .k-icon-button {
+  color: rgb(255 255 255 / 0.8);
+}
+
+.region-toolbar .k-icon-button:hover:not(:disabled) {
+  background: rgb(255 255 255 / 0.1);
+  color: #ffffff;
+}
+
+.region-toolbar__group {
+  display: flex;
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 2px;
+  border-radius: var(--k-radius);
+  background: rgb(255 255 255 / 0.06);
+}
+
+/* Prefixed to win over the theme's form-control reset (`.k-app button`, `.k-app input`). */
+.region-toolbar .region-toolbar__aspect {
+  min-width: 40px;
+  height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgb(255 255 255 / 0.7);
+  font-size: var(--k-text-xs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.region-toolbar .region-toolbar__aspect:hover {
+  color: #ffffff;
+}
+
+.region-toolbar .region-toolbar__aspect[aria-pressed="true"] {
+  background: rgb(255 255 255 / 0.16);
+  color: #ffffff;
+}
+
+.region-toolbar__size {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: rgb(255 255 255 / 0.5);
+  font-size: var(--k-text-xs);
+}
+
+.region-toolbar .region-toolbar__input {
+  width: 64px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.06);
+  color: #ffffff;
+  font-size: var(--k-text-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  appearance: textfield;
+}
+
+.region-toolbar__input::-webkit-inner-spin-button,
+.region-toolbar__input::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.region-toolbar__divider {
+  width: 1px;
+  height: 20px;
+  background: rgb(255 255 255 / 0.12);
+}
+
+.region-toolbar__record {
+  min-height: 32px;
+  padding-inline: 12px;
+}
+
+/* ---------- Frame around a recorded region (click-through, not captured) ---------- */
+
+.frame-page {
+  background: transparent;
+}
+
+.region-frame {
+  position: fixed;
+  inset: 0;
+  border: 2px solid var(--k-danger);
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.25);
+  transition: border-color var(--k-duration) var(--k-ease);
+}
+
+.frame-page--paused .region-frame {
+  border-color: #f5b84a;
 }
 
 /* ---------- Updates (More view) ---------- */

@@ -1,7 +1,8 @@
 import { spawn } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { _electron, type ElectronApplication, expect, type Page, test } from "@playwright/test";
 
 // Playwright loads this package's tests as CommonJS, so `import.meta` isn't available.
@@ -43,6 +44,31 @@ function inPage<T>(page: string, code: string): Promise<T> {
         ?.webContents.executeJavaScript(script, true),
     [page, code] as const,
   ) as Promise<T>;
+}
+
+/**
+ * A red always-on-top window from another process (it takes focus), standing in for another app's
+ * call or video player. Resolves once it is on screen; kill the process to close it.
+ */
+async function showForeignWindow(rect: { x: number; y: number; width: number; height: number }) {
+  const electronPath = require("electron") as unknown as string;
+  const other = spawn(
+    electronPath,
+    [
+      join(__dirname, "fixtures/foreign-window.cjs"),
+      String(rect.x),
+      String(rect.y),
+      String(rect.width),
+      String(rect.height),
+    ],
+    { stdio: ["ignore", "pipe", "ignore"] },
+  );
+  await new Promise<void>((resolve) =>
+    other.stdout?.on("data", (data) => {
+      if (String(data).includes("SHOWN")) resolve();
+    }),
+  );
+  return other;
 }
 
 /** Starts Kadr on the test's profile (relaunching keeps its settings). */
@@ -240,25 +266,14 @@ test("the bubble stays above another app's always-on-top window", async () => {
   );
   if (!bounds) throw new Error("No bubble window");
 
-  // A red always-on-top window from another process, covering the bubble and taking focus.
-  const electronPath = require("electron") as unknown as string;
-  const other = spawn(
-    electronPath,
-    [
-      join(__dirname, "fixtures/foreign-window.cjs"),
-      String(bounds.x - 30),
-      String(bounds.y - 30),
-      String(bounds.width + 60),
-      String(bounds.height + 60),
-    ],
-    { stdio: ["ignore", "pipe", "ignore"] },
-  );
+  // Another app's window covering the bubble and taking focus.
+  const other = await showForeignWindow({
+    x: bounds.x - 30,
+    y: bounds.y - 30,
+    width: bounds.width + 60,
+    height: bounds.height + 60,
+  });
   try {
-    await new Promise<void>((resolve) =>
-      other.stdout?.on("data", (data) => {
-        if (String(data).includes("SHOWN")) resolve();
-      }),
-    );
     // What is actually on screen at the bubble's centre, from a real screen capture.
     const pixelAtBubble = () =>
       app.evaluate(async ({ desktopCapturer, screen }, rect) => {
@@ -280,5 +295,226 @@ test("the bubble stays above another app's always-on-top window", async () => {
     await expect.poll(pixelAtBubble, { timeout: 5_000 }).toBe("bubble");
   } finally {
     other.kill();
+  }
+});
+
+/** The region picker overlay covering the primary display (there is one per display). */
+async function primaryRegionPicker(): Promise<Page> {
+  const primary = await app.evaluate(({ screen }) => screen.getPrimaryDisplay().bounds);
+  let picker: Page | undefined;
+  await expect
+    .poll(
+      async () => {
+        for (const win of app.windows()) {
+          if (!win.url().endsWith("/region.html")) continue;
+          const origin = await win.evaluate(() => [window.screenX, window.screenY]);
+          if (origin[0] === primary.x && origin[1] === primary.y) picker = win;
+        }
+        return picker !== undefined;
+      },
+      { timeout: 20_000 },
+    )
+    .toBe(true);
+  if (!picker) throw new Error("No region picker on the primary display");
+  return picker;
+}
+
+function regionPickerCount(): Promise<number> {
+  return app.evaluate(
+    ({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows().filter((w) => w.webContents.getURL().endsWith("/region.html"))
+        .length,
+  );
+}
+
+function sessionStatus(): Promise<string> {
+  return inPage<string>("control", "window.kadr.session.get().then((s) => s.status)");
+}
+
+/** Width and height of the video track of an MP4 file, from its `tkhd` box. */
+function mp4VideoSize(file: string): { width: number; height: number } | null {
+  const data = readFileSync(file);
+  for (let at = data.indexOf("tkhd"); at !== -1; at = data.indexOf("tkhd", at + 4)) {
+    const end = at - 4 + data.readUInt32BE(at - 4);
+    const width = data.readUInt32BE(end - 8) / 65536;
+    const height = data.readUInt32BE(end - 4) / 65536;
+    if (width > 0 && height > 0) return { width, height };
+  }
+  return null;
+}
+
+/** Screen only, no countdown, microphone or system audio: the tests need no camera or audio. */
+const REGION_SETTINGS = `window.kadr.settings.update({
+  recording: {
+    mode: "screen",
+    captureArea: "region",
+    countdownSeconds: 0,
+    microphoneEnabled: false,
+    systemAudio: false,
+  },
+})`;
+
+test("the region picker opens on Start, selects with the keyboard, and cancels cleanly", async () => {
+  const panel = await windowFor("control");
+  await expect(panel.getByRole("button", { name: "Start recording" })).toBeVisible();
+  await inPage("control", REGION_SETTINGS);
+  await expect(panel.getByRole("combobox", { name: "Recording source" })).toHaveValue("region");
+  await expect(panel.getByText("You'll pick the area next")).toBeVisible();
+
+  await panel.getByRole("button", { name: "Start recording" }).click();
+  const picker = await primaryRegionPicker();
+  await expect(picker.locator(".region__hint")).toContainText("Drag to select an area");
+  await expect.poll(() => isWindowVisible("control")).toBe(false);
+  expect(await regionPickerCount()).toBe(
+    await app.evaluate(({ screen }) => screen.getAllDisplays().length),
+  );
+
+  // Ctrl+A selects the whole display; the label shows the video size in device pixels.
+  const display = await app.evaluate(({ screen }) => {
+    const { size, scaleFactor } = screen.getPrimaryDisplay();
+    return { width: size.width * scaleFactor, height: size.height * scaleFactor };
+  });
+  await picker.getByRole("application", { name: "Select the area to record" }).focus();
+  await picker.keyboard.press("Control+A");
+  const even = (value: number) => Math.round(value / 2) * 2;
+  await expect(picker.locator(".region__size")).toHaveText(
+    `${even(display.width)} × ${even(display.height)}`,
+  );
+  await expect(picker.getByRole("toolbar", { name: "Recording area" })).toBeVisible();
+
+  // Escape gives up: the pickers close and the panel comes back, idle. (Key down only: the window
+  // is gone before a key up could reach it.)
+  await picker.keyboard.down("Escape");
+  await expect.poll(regionPickerCount).toBe(0);
+  await expect.poll(() => isWindowVisible("control")).toBe(true);
+  expect(await sessionStatus()).toBe("idle");
+});
+
+test("recording a region captures exactly that area and copies the file", async () => {
+  // Real screen capture and encoding; checked on Windows, like the stacking test.
+  test.skip(process.platform !== "win32", "Screen capture is checked on Windows");
+  const panel = await windowFor("control");
+  await expect(panel.getByRole("button", { name: "Start recording" })).toBeVisible();
+  // Recordings go to a throwaway folder, and the user's clipboard text is put back afterwards.
+  const videos = mkdtempSync(join(tmpdir(), "kadr-videos-"));
+  await app.evaluate(({ app: electronApp }, dir) => electronApp.setPath("videos", dir), videos);
+  const clipboardText = await app.evaluate(({ clipboard }) => clipboard.readText());
+  try {
+    await inPage("control", REGION_SETTINGS);
+    await panel.getByRole("button", { name: "Start recording" }).click();
+    const picker = await primaryRegionPicker();
+    const scale = await app.evaluate(({ screen }) => screen.getPrimaryDisplay().scaleFactor);
+    const primary = await app.evaluate(({ screen }) => screen.getPrimaryDisplay().bounds);
+
+    // Draw a 400×300 DIP area with the mouse.
+    await picker.mouse.move(200, 150);
+    await picker.mouse.down();
+    await picker.mouse.move(400, 300, { steps: 5 });
+    await picker.mouse.move(600, 450, { steps: 5 });
+    await picker.mouse.up();
+    const expected = { width: Math.round(200 * scale) * 2, height: Math.round(150 * scale) * 2 };
+    await expect(picker.locator(".region__size")).toHaveText(
+      `${expected.width} × ${expected.height}`,
+    );
+    await expect(picker.getByRole("spinbutton", { name: "Width in pixels" })).toHaveValue(
+      String(expected.width),
+    );
+
+    await picker.getByRole("button", { name: "Record", exact: true }).click();
+    await expect.poll(sessionStatus, { timeout: 15_000 }).toBe("recording");
+    expect(await regionPickerCount()).toBe(0);
+
+    // A frame marks the area from just outside it.
+    const frameBounds = () =>
+      app.evaluate(({ BrowserWindow }) => {
+        const win = BrowserWindow.getAllWindows().find((w) =>
+          w.webContents.getURL().endsWith("/frame.html"),
+        );
+        return win?.isVisible() ? win.getBounds() : null;
+      });
+    await expect
+      .poll(frameBounds)
+      .toEqual({ x: primary.x + 196, y: primary.y + 146, width: 408, height: 308 });
+
+    // Something recognisable in the left half of the area only: proves the crop is in the right
+    // place, not just the right size.
+    const marker = await showForeignWindow({
+      x: primary.x + 200,
+      y: primary.y + 150,
+      width: 200,
+      height: 300,
+    });
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await inPage("control", "window.kadr.session.command('stop')");
+      await expect.poll(sessionStatus, { timeout: 15_000 }).toBe("idle");
+    } finally {
+      marker.kill();
+    }
+    const result = await inPage<{ path: string; copied: boolean }>(
+      "control",
+      "window.kadr.session.get().then((s) => s.lastResult)",
+    );
+
+    expect(dirname(result.path)).toBe(join(videos, "Kadr"));
+    expect(existsSync(result.path)).toBe(true);
+    expect(mp4VideoSize(result.path)).toEqual(expected);
+    // The last frame, decoded in the panel: red on the left (the marker), not on the right.
+    const [left, right] = await inPage<number[][]>(
+      "control",
+      `(async () => {
+        const bytes = Uint8Array.from(atob("${readFileSync(result.path).toString("base64")}"), (c) => c.charCodeAt(0));
+        const video = document.createElement("video");
+        video.muted = true;
+        video.src = URL.createObjectURL(new Blob([bytes], { type: "video/mp4" }));
+        video.playbackRate = 4;
+        await video.play();
+        await new Promise((resolve) => video.addEventListener("ended", resolve, { once: true }));
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const context = canvas.getContext("2d");
+        context.drawImage(video, 0, 0);
+        const sample = (x) => Array.from(context.getImageData(Math.round(canvas.width * x), canvas.height / 2, 1, 1).data.slice(0, 3));
+        URL.revokeObjectURL(video.src);
+        return [sample(0.25), sample(0.75)];
+      })()`,
+    );
+    const isRed = ([red = 0, green = 0, blue = 0]: number[]) =>
+      red > 200 && green < 60 && blue < 60;
+    expect(isRed(left ?? [])).toBe(true);
+    expect(isRed(right ?? [])).toBe(false);
+
+    // Copied by default, as a file the system pastes (CF_HDROP on Windows).
+    expect(result.copied).toBe(true);
+    const copied = await app.evaluate(async ({ clipboard }) => {
+      const item = (await clipboard.read()).find((i) => i.types.includes("text/uri-list"));
+      return item ? (await item.getType("text/uri-list")).text() : null;
+    });
+    expect(copied?.trim()).toBe(pathToFileURL(result.path).href);
+
+    // The compact card: icon actions with tooltips (the accessible name is the tooltip text).
+    const card = panel.getByRole("region", { name: "Last recording" });
+    await expect(card.getByText("Saved and copied")).toBeVisible();
+    for (const label of ["Open", "Copy to clipboard", "Show in folder"]) {
+      await expect(card.getByRole("button", { name: label })).toHaveAttribute(
+        "data-tooltip",
+        label,
+      );
+    }
+    await card.getByRole("button", { name: "Copy to clipboard" }).click();
+    await expect(card.getByRole("button", { name: "Copied" })).toBeVisible();
+
+    // Next time the picker starts from the same area.
+    await panel.getByRole("button", { name: "Start recording" }).click();
+    const again = await primaryRegionPicker();
+    await expect(again.locator(".region__size")).toHaveText(
+      `${expected.width} × ${expected.height}`,
+    );
+    await again.keyboard.down("Escape");
+    await expect.poll(regionPickerCount).toBe(0);
+  } finally {
+    await app.evaluate(({ clipboard }, text) => clipboard.writeText(text), clipboardText);
+    rmSync(videos, { recursive: true, force: true });
   }
 });

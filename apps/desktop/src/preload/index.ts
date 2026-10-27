@@ -38,6 +38,15 @@ const api: KadrApi = {
     showInFolder: (path) => ipcRenderer.invoke(Channels.shellShowInFolder, path),
     openPath: (path) => ipcRenderer.invoke(Channels.shellOpenPath, path),
     openRecordingsFolder: () => ipcRenderer.invoke(Channels.shellOpenRecordings),
+    copyToClipboard: (path) => ipcRenderer.invoke(Channels.shellCopyFile, path),
+  },
+  region: {
+    select: () => ipcRenderer.invoke(Channels.regionSelect),
+    getContext: () => ipcRenderer.invoke(Channels.regionGetContext),
+    update: (region) => ipcRenderer.send(Channels.regionUpdate, region),
+    confirm: (region) => ipcRenderer.send(Channels.regionConfirm, region),
+    cancel: () => ipcRenderer.send(Channels.regionCancel),
+    onChange: (listener) => subscribe(Channels.regionChanged, listener),
   },
   window: {
     setIgnoreMouseEvents: (ignore) => ipcRenderer.send(Channels.windowSetIgnoreMouse, ignore),

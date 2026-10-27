@@ -18,6 +18,11 @@ recorder at [bilimgram.github.io/kadr](https://bilimgram.github.io/kadr/).
 | Recordings                            | Your Videos folder (`Videos/Kadr`), as ordinary files |
 | Settings (bubble, devices, shortcuts) | The app's settings file in your user profile          |
 | Downloaded updates                    | The app's update cache, until they are installed      |
+| Last recorded region, bubble position | `window-state.json` in your user profile              |
+
+When a recording finishes, Kadr puts a reference to the file on your clipboard (not the video
+itself), so you can paste it into another app. Turn this off in **Settings → More → Copy recordings
+to clipboard**.
 
 Camera, microphone and screen are accessed only while you use them: the camera while the bubble is
 visible, and the screen, camera and microphone while you record. Light correction runs on your

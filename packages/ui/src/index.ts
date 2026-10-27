@@ -4,6 +4,7 @@ export { Button, type ButtonProps } from "./Button";
 export { Countdown, type CountdownProps } from "./Countdown";
 export { ErrorBoundary, type ErrorBoundaryProps } from "./ErrorBoundary";
 export { cx, formatBytes, formatDuration, formatShortcut } from "./format";
+export { IconButton, type IconButtonProps } from "./IconButton";
 export { Kbd } from "./Kbd";
 export { SegmentedControl, type SegmentedOption } from "./SegmentedControl";
 export { SelectField, type SelectOption } from "./SelectField";

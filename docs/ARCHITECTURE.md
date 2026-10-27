@@ -85,7 +85,9 @@ flowchart TB
 | Control panel     | Frameless, transparent card near the top-right; closes to the system tray                                              | Source, camera and mic rows with On/Off toggles and a live mic meter; Start; Bubble / Countdown / Audio / More settings ✅  |
 | Bubble            | Transparent, frameless, always-on-top (`screen-saver` level), all workspaces; click-through outside the shape; JS drag | Live camera preview in the chosen shape with automatic light correction; shown while the panel is open or recording ✅      |
 | Recording toolbar | Vertical pill on the left edge, content-protected (excluded from capture), click-through outside the pill              | Stop, timer, pause/resume, restart and discard (with confirmation), mic mute, camera toggle ✅ — draw and mark mistake next |
-| Countdown         | Centered transparent window, content-protected                                                                         | 3-2-1 with synthesized tones; Enter starts now, Esc cancels ✅ — region selection overlay next                              |
+| Countdown         | Centered transparent window (over the region, if any), content-protected                                               | 3-2-1 with synthesized tones; Enter starts now, Esc cancels ✅                                                              |
+| Region picker     | One transparent, always-on-top overlay per display, below the bubble                                                   | Draw, move, resize, aspect presets, exact size, keyboard control; remembers the last area ✅ (ADR 0007)                     |
+| Region frame      | Click-through, content-protected window just outside the recorded area                                                 | Marks what is being recorded; red, amber while paused ✅                                                                    |
 | Recording engine  | Lives in the control panel renderer (`backgroundThrottling: false`)                                                    | Capture + encode pipeline; reports state to main, which choreographs the windows                                            |
 | Editor, Settings  | Normal windows                                                                                                         | Editing, preferences, keys                                                                                                  |
 
@@ -98,8 +100,9 @@ flowchart TB
   strict Content-Security-Policy header.
 - All navigation and `window.open` are denied; permission requests are allowed only for `media` and
   `display-capture` from the app's own origin.
-- Display capture goes through `session.setDisplayMediaRequestHandler`, so the main process controls
-  exactly which source a renderer may record.
+- Display capture goes through `session.setDisplayMediaRequestHandler` (`main/capture.ts`), so the
+  main process controls exactly which source a renderer may record: the primary display, or the one
+  with the selected region and never another (ADR 0007).
 - Planned: Electron Fuses, ASAR integrity, signed and notarized builds (see PLAN §7).
 
 ### 3.3 Live bubble: two capture modes

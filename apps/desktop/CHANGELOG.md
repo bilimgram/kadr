@@ -1,5 +1,19 @@
 # @kadr/desktop
 
+## 0.2.0
+
+### Minor Changes
+
+- Record a region of any screen. Choose **Region** as the source: every screen dims and you drag the
+  area to record, then move it, resize it from its edges and corners, lock an aspect ratio (16:9,
+  4:3, 1:1, 9:16), type an exact size, or click to take the whole screen. Arrow keys, Enter and Esc
+  work too, and Kadr offers the same area next time. A thin frame marks the area while recording,
+  and the video contains exactly that area.
+  
+  Finished recordings are now copied to the clipboard, ready to paste into a chat, an email or a
+  folder (turn it off in Settings → More). The saved-recording card is smaller, with Open, Copy and
+  Show in folder as icon buttons with tooltips. The camera bubble's loading spinner is bigger.
+
 ## 0.1.2
 
 ### Patch Changes

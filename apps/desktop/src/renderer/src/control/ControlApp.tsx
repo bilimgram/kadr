@@ -4,6 +4,7 @@ import {
   cx,
   formatBytes,
   formatDuration,
+  IconButton,
   Kbd,
   SegmentedControl,
   type SegmentedOption,
@@ -12,8 +13,12 @@ import {
   Switch,
 } from "@kadr/ui";
 import {
+  Check,
   ChevronDown,
   ChevronLeft,
+  CircleAlert,
+  CircleCheck,
+  Copy,
   Ellipsis,
   ExternalLink,
   FolderOpen,
@@ -25,6 +30,7 @@ import {
   RefreshCw,
   RotateCw,
   Smile,
+  SquareDashed,
   Timer,
   Video,
   Volume2,
@@ -36,6 +42,7 @@ import type {
   AppSettingsPatch,
   BubbleSizePreset,
   CountdownSeconds,
+  RecordingResult,
   ThemePreference,
   UpdateChannel,
   UpdateState,
@@ -80,8 +87,12 @@ const CHANNEL_OPTIONS: ReadonlyArray<SegmentedOption<UpdateChannel>> = [
 
 const SOURCE_OPTIONS: readonly SelectOption[] = [
   { value: "screen", label: "Full screen" },
+  { value: "region", label: "Region" },
   { value: "camera", label: "Camera only" },
 ];
+
+/** How long the copy button shows its confirmation. */
+const COPIED_FEEDBACK_MS = 1800;
 
 /** Pseudo-devices Chromium adds on Windows; we offer our own "Default" entry instead. */
 const PSEUDO_DEVICE_IDS = new Set(["default", "communications"]);
@@ -109,6 +120,82 @@ function useDevices() {
 
 function fileName(path: string): string {
   return path.split(/[\\/]/).pop() ?? path;
+}
+
+/** The recording that was just saved: a compact card with icon actions. */
+function SavedRecording({ result }: { result: RecordingResult }) {
+  const [feedback, setFeedback] = useState<"copied" | "failed" | null>(null);
+  useEffect(() => {
+    if (!feedback) return;
+    const id = setTimeout(() => setFeedback(null), COPIED_FEEDBACK_MS);
+    return () => clearTimeout(id);
+  }, [feedback]);
+
+  const copy = () => {
+    engine.copyResult().then(
+      () => setFeedback("copied"),
+      () => setFeedback("failed"),
+    );
+  };
+  const name = fileName(result.path);
+  const copyLabel =
+    feedback === "copied"
+      ? "Copied"
+      : feedback === "failed"
+        ? "Couldn't copy. Try again"
+        : "Copy to clipboard";
+
+  return (
+    <section className="saved" aria-label="Last recording">
+      <CircleCheck className="k-icon saved__icon" aria-hidden="true" />
+      <div className="saved__text" title={name}>
+        <p className="saved__title">{result.copied ? "Saved and copied" : "Recording saved"}</p>
+        <p className="saved__meta">
+          {formatDuration(result.durationMs)} · {formatBytes(result.sizeBytes)}
+        </p>
+      </div>
+      <div className="saved__actions">
+        <IconButton
+          size="sm"
+          label="Open"
+          icon={<Play {...icon} />}
+          onClick={() => void window.kadr.shell.openPath(result.path)}
+        />
+        <IconButton
+          size="sm"
+          label={copyLabel}
+          className={cx(feedback === "copied" && "saved__copied")}
+          icon={
+            feedback === "copied" ? (
+              <Check {...icon} />
+            ) : feedback === "failed" ? (
+              <CircleAlert {...icon} />
+            ) : (
+              <Copy {...icon} />
+            )
+          }
+          onClick={copy}
+        />
+        <IconButton
+          size="sm"
+          label="Show in folder"
+          tooltip="top-end"
+          icon={<FolderOpen {...icon} />}
+          onClick={() => void window.kadr.shell.showInFolder(result.path)}
+        />
+        <IconButton
+          size="sm"
+          label="Dismiss"
+          tooltip="top-end"
+          icon={<X {...icon} />}
+          onClick={() => engine.dismissResult()}
+        />
+      </div>
+      <p className="k-sr-only" role="status">
+        {feedback === "copied" ? "Copied to clipboard" : feedback === "failed" ? "Copy failed" : ""}
+      </p>
+    </section>
+  );
 }
 
 /** A Loom-style source row: device picker with an On/Off pill and an optional level meter. */
@@ -327,6 +414,7 @@ function MainView({
   const { bubble, recording } = settings;
   const platform = window.kadr.platform;
   const cameraOnly = recording.mode === "camera";
+  const region = !cameraOnly && recording.captureArea === "region";
   const cameraOn = recording.mode !== "screen" && bubble.visible;
   const preparing = session.status === "preparing";
   const result = session.status === "idle" ? session.lastResult : null;
@@ -362,49 +450,35 @@ function MainView({
           {session.error}
         </Alert>
       )}
-      {result && (
-        <Alert
-          tone="success"
-          title="Recording saved"
-          onDismiss={() => engine.dismissResult()}
-          actions={
-            <div className="result-actions">
-              <Button
-                size="sm"
-                icon={<Play {...icon} />}
-                onClick={() => void window.kadr.shell.openPath(result.path)}
-              >
-                Open
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                icon={<FolderOpen {...icon} />}
-                onClick={() => void window.kadr.shell.showInFolder(result.path)}
-              >
-                Show in folder
-              </Button>
-            </div>
-          }
-        >
-          <span className="result-name">{fileName(result.path)}</span>
-          <span>
-            {formatDuration(result.durationMs)} · {formatBytes(result.sizeBytes)}
-          </span>
-        </Alert>
-      )}
+      {result && <SavedRecording key={result.path} result={result} />}
 
       <div className="rows">
         <DeviceRow
-          icon={cameraOnly ? <Video {...icon} /> : <Monitor {...icon} />}
+          icon={
+            cameraOnly ? (
+              <Video {...icon} />
+            ) : region ? (
+              <SquareDashed {...icon} />
+            ) : (
+              <Monitor {...icon} />
+            )
+          }
           label="Recording source"
-          value={cameraOnly ? "camera" : "screen"}
+          value={cameraOnly ? "camera" : region ? "region" : "screen"}
           options={SOURCE_OPTIONS}
           onChange={(value) =>
-            update({
-              recording: { mode: value === "camera" ? "camera" : "screenAndCamera" },
-              bubble: { visible: true },
-            })
+            update(
+              value === "camera"
+                ? { recording: { mode: "camera" }, bubble: { visible: true } }
+                : {
+                    recording: {
+                      // Leaving camera-only turns the camera bubble on; otherwise it stays as is.
+                      mode: cameraOnly ? "screenAndCamera" : recording.mode,
+                      captureArea: value === "region" ? "region" : "fullScreen",
+                    },
+                    ...(cameraOnly && { bubble: { visible: true } }),
+                  },
+            )
           }
         />
         <DeviceRow
@@ -463,7 +537,7 @@ function MainView({
         {preparing ? "Starting…" : "Start recording"}
       </Button>
       <p className="panel__hint">
-        No recording limit
+        {region ? "You'll pick the area next" : "No recording limit"}
         {startShortcut && (
           <>
             {" · "}
@@ -584,6 +658,12 @@ function SettingsView({
               onChange={(theme) => update({ appearance: { theme } })}
             />
           </div>
+          <Switch
+            label="Copy recordings to clipboard"
+            description="Paste the video into a chat, email or folder right after you stop"
+            checked={recording.copyToClipboard}
+            onChange={(copyToClipboard) => update({ recording: { copyToClipboard } })}
+          />
           {platform !== "linux" && (
             <Switch
               label="Open Kadr at login"

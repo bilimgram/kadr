@@ -1,13 +1,24 @@
 import { join } from "node:path";
 import { getBubbleShape } from "@kadr/compositor/shapes";
 import { app, BrowserWindow, screen, type WebPreferences } from "electron";
-import { type AppSettings, Channels } from "../shared/api";
+import {
+  type AppSettings,
+  Channels,
+  type RegionContext,
+  type RegionSelection,
+} from "../shared/api";
 import { APP_ORIGIN } from "../shared/origin";
-import { clampIntoArea, isFullyVisible, resolveBubblePosition } from "../shared/placement";
+import {
+  clampIntoArea,
+  isFullyVisible,
+  type Rect,
+  resolveBubblePosition,
+} from "../shared/placement";
+import { type DisplayRegion, normalizeRegion, restoreRegion } from "../shared/region";
 import { isBubbleShown } from "../shared/settings";
 import type { WindowStateStore } from "./window-state";
 
-type Page = "control" | "bubble" | "toolbar" | "countdown";
+type Page = "control" | "bubble" | "toolbar" | "countdown" | "region" | "frame";
 
 /** Loom-like bubble sizes (diameter in DIPs). */
 const BUBBLE_PIXEL_HEIGHT = { small: 150, medium: 200, large: 280 } as const;
@@ -24,6 +35,8 @@ const TOOLBAR_SIZE = { width: 280, height: 440 } as const;
 /** Transparent space above and below the toolbar pill inside its window. */
 const TOOLBAR_PILL_INSET = 46;
 const COUNTDOWN_SIZE = { width: 420, height: 420 } as const;
+/** The frame around a recorded region sits this far outside it, so it is never in the video. */
+const REGION_FRAME_INSET = 4;
 
 const secureWebPreferences: WebPreferences = {
   preload: join(__dirname, "../preload/index.js"),
@@ -80,6 +93,11 @@ export class WindowManager {
   private bubble: BrowserWindow | null = null;
   private toolbar: BrowserWindow | null = null;
   private countdown: BrowserWindow | null = null;
+  /** Region picker overlays, one per display, while the user picks an area. */
+  private regionPickers = new Map<number, BrowserWindow>();
+  private regionPickerStart: DisplayRegion | null = null;
+  private onRegionPickerClosed: (() => void) | null = null;
+  private regionFrame: BrowserWindow | null = null;
   private settings: AppSettings | null = null;
   private sessionActive = false;
   private toolbarMovedByUser = false;
@@ -95,9 +113,11 @@ export class WindowManager {
     // Another window took the top of the stack (including our own panel): put ours back on top.
     app.on("browser-window-focus", () => this.raiseFloatingWindows());
     app.on("browser-window-blur", () => this.raiseFloatingWindows());
-    // Displays changed (unplugged monitor, new resolution): keep the bubble fully visible.
+    // Displays changed (unplugged monitor, new resolution): keep the bubble fully visible, and
+    // give up on a region being picked, whose overlays no longer match the screens.
     const onDisplaysChanged = () => {
       this.keepBubbleOnScreen();
+      if (this.regionPickers.size > 0) this.onRegionPickerClosed?.();
       this.raiseFloatingWindows();
     };
     screen.on("display-added", onDisplaysChanged);
@@ -233,16 +253,18 @@ export class WindowManager {
     if (win === this.bubble) this.rememberBubblePosition();
   }
 
-  openCountdown(onClosed: () => void): void {
+  /** Shows the countdown over `center` (the recorded region) or in the middle of the screen. */
+  openCountdown(onClosed: () => void, center?: Rect): void {
     this.closeCountdown();
-    const area = screen.getPrimaryDisplay().workArea;
+    const target = center ?? screen.getPrimaryDisplay().workArea;
+    const centered = {
+      ...COUNTDOWN_SIZE,
+      x: target.x + Math.round((target.width - COUNTDOWN_SIZE.width) / 2),
+      y: target.y + Math.round((target.height - COUNTDOWN_SIZE.height) / 2),
+    };
     const win = createOverlayWindow(
       "countdown",
-      {
-        ...COUNTDOWN_SIZE,
-        x: area.x + Math.round((area.width - COUNTDOWN_SIZE.width) / 2),
-        y: area.y + Math.round((area.height - COUNTDOWN_SIZE.height) / 2),
-      },
+      { ...centered, ...clampIntoArea(centered, screen.getDisplayMatching(centered).workArea) },
       // Countdown tones play without a prior click in this window.
       { ...secureWebPreferences, autoplayPolicy: "no-user-gesture-required" },
     );
@@ -268,6 +290,124 @@ export class WindowManager {
 
   isCountdownWindow(win: BrowserWindow | null): boolean {
     return !!win && win === this.countdown;
+  }
+
+  /**
+   * Covers every display with a region picker overlay. The panel hides; the bubble stays above
+   * the overlays so it can still be placed. `onClosed` runs if the pickers go away on their own
+   * (closed by the system, or the displays changed).
+   */
+  openRegionPicker(onClosed: () => void): void {
+    this.closeRegionPicker();
+    this.onRegionPickerClosed = onClosed;
+    const displays = screen.getAllDisplays();
+    this.regionPickerStart = restoreRegion(this.windowState.region, displays);
+    // Keyboard focus goes to the display with the remembered region, else the one with the mouse.
+    const focusId =
+      this.regionPickerStart?.displayId ??
+      screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).id;
+    this.hideControl();
+    for (const display of displays) {
+      const win = createOverlayWindow("region", display.bounds);
+      win.once("ready-to-show", () => {
+        // Windows sizes a window created on a display with another scale factor wrongly.
+        win.setBounds(display.bounds);
+        if (display.id === focusId) {
+          win.show();
+          win.focus();
+        } else {
+          win.showInactive();
+        }
+        this.raiseFloatingWindows();
+      });
+      win.on("closed", () => {
+        // closeRegionPicker() forgets its windows first; anything else is a cancel.
+        if (this.regionPickers.get(display.id) === win) this.onRegionPickerClosed?.();
+      });
+      this.regionPickers.set(display.id, win);
+    }
+  }
+
+  closeRegionPicker(): void {
+    const pickers = [...this.regionPickers.values()];
+    this.regionPickers.clear();
+    this.onRegionPickerClosed = null;
+    for (const win of pickers) if (!win.isDestroyed()) win.close();
+  }
+
+  /** The display a region picker covers, or null when `win` isn't one. */
+  regionPickerDisplayId(win: BrowserWindow | null): number | null {
+    for (const [displayId, picker] of this.regionPickers) if (picker === win) return displayId;
+    return null;
+  }
+
+  regionPickerContext(win: BrowserWindow | null): RegionContext | null {
+    const displayId = this.regionPickerDisplayId(win);
+    const display = screen.getAllDisplays().find((candidate) => candidate.id === displayId);
+    if (!display) return null;
+    const start = this.regionPickerStart;
+    return {
+      displayId: display.id,
+      bounds: display.bounds,
+      scaleFactor: display.scaleFactor,
+      selection: start?.displayId === display.id ? start : null,
+    };
+  }
+
+  /** Tells the pickers on other displays where the selection is now, so they clear theirs. */
+  forwardRegionSelection(region: DisplayRegion | null, from: BrowserWindow): void {
+    for (const win of this.regionPickers.values()) {
+      if (win !== from && !win.isDestroyed()) win.webContents.send(Channels.regionChanged, region);
+    }
+  }
+
+  /**
+   * Turns a picked region into what the recording needs, and remembers it for next time. Null
+   * when it isn't usable (its display is gone, or it is too small).
+   */
+  acceptRegion(region: DisplayRegion): RegionSelection | null {
+    const displays = screen
+      .getAllDisplays()
+      .filter((display) => this.regionPickers.has(display.id));
+    const area = normalizeRegion(region, displays);
+    const display = displays.find((candidate) => candidate.id === area?.displayId);
+    if (!area || !display) return null;
+    this.windowState.rememberRegion(area);
+    const { displayId, ...rect } = area;
+    return { displayId, display: display.bounds, area: rect };
+  }
+
+  /** A thin frame just outside the recorded region, excluded from capture and click-through. */
+  showRegionFrame(area: Rect): void {
+    const bounds = {
+      x: area.x - REGION_FRAME_INSET,
+      y: area.y - REGION_FRAME_INSET,
+      width: area.width + REGION_FRAME_INSET * 2,
+      height: area.height + REGION_FRAME_INSET * 2,
+    };
+    const existing = this.regionFrame;
+    if (existing && !existing.isDestroyed()) {
+      existing.setBounds(bounds);
+      if (!existing.isVisible()) existing.showInactive();
+      this.raiseFloatingWindows();
+      return;
+    }
+    const win = createOverlayWindow("frame", bounds);
+    win.setContentProtection(true);
+    win.setIgnoreMouseEvents(true);
+    win.once("ready-to-show", () => {
+      if (this.regionFrame !== win) return;
+      win.setBounds(bounds);
+      win.showInactive();
+      this.raiseFloatingWindows();
+    });
+    this.regionFrame = win;
+  }
+
+  hideRegionFrame(): void {
+    const win = this.regionFrame;
+    this.regionFrame = null;
+    if (win && !win.isDestroyed()) win.close();
   }
 
   applyBubble(settings: AppSettings): void {
@@ -308,12 +448,21 @@ export class WindowManager {
   }
 
   /**
-   * Puts the bubble, toolbar and countdown back at the very top of the window stack, above other
-   * always-on-top windows, without taking focus. Repeats while any of them is visible.
+   * Puts the floating windows (region picker and frame, bubble, toolbar, countdown) back at the
+   * very top of the window stack, above other always-on-top windows, without taking focus.
+   * Repeats while any of them is visible.
    */
   private raiseFloatingWindows(): void {
     let anyVisible = false;
-    for (const win of [this.bubble, this.toolbar, this.countdown]) {
+    // Bottom to top: the bubble stays above the region picker, so it can be placed while picking.
+    const stack = [
+      ...this.regionPickers.values(),
+      this.regionFrame,
+      this.bubble,
+      this.toolbar,
+      this.countdown,
+    ];
+    for (const win of stack) {
       if (!win || win.isDestroyed() || !win.isVisible()) continue;
       anyVisible = true;
       // Re-applied every time: Windows can drop the level after a hide/show cycle.

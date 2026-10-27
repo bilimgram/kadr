@@ -66,17 +66,39 @@ Long recordings are limited by your device’s available memory.
 1. Open Kadr. A small control panel appears in the top-right corner, and your camera bubble in the
    bottom-left. Closing the panel (or pressing <kbd>Esc</kbd>) keeps Kadr running in the tray (menu
    bar on macOS), and turns the camera off until you open it again.
-2. Choose **Full screen** or **Camera only**, and pick your camera and microphone. The level meter shows
-   that your microphone is working.
-3. Press **Start recording**. After a 3-2-1 countdown, recording starts.
+2. Choose **Full screen**, **Region** or **Camera only**, and pick your camera and microphone. The
+   level meter shows that your microphone is working.
+3. Press **Start recording**. With **Region**, [pick the area](#recording-part-of-the-screen) first.
+   After a 3-2-1 countdown, recording starts.
 4. Use the floating toolbar on the left to **pause**, **restart**, **discard**, mute the microphone,
    hide the camera, or **stop**. The toolbar and countdown never appear in your recording.
-5. When you stop, the recording is saved to your **Videos/Kadr** folder as MP4 (or WebM), and the
-   panel offers **Open** and **Show in folder**.
+5. When you stop, the recording is saved to your **Videos/Kadr** folder as MP4 (or WebM) and copied
+   to the clipboard, so you can paste the video straight into a chat, an email or a folder. The panel
+   shows how long it is and offers **Open**, **Copy to clipboard** and **Show in folder** (hover an
+   icon to see what it does). Turn copying off in **Settings → More**.
 
 Drag the bubble anywhere on screen; it is recorded wherever you put it. It stays on top of every
 other window, remembers its place the next time you open Kadr, and moves back into view if you
 disconnect a monitor.
+
+## Recording part of the screen
+
+Choose **Region** as the source and press **Start recording**. Every screen dims, and you pick the
+area to record:
+
+- **Drag** to draw the area. **Click** without dragging to take the whole screen.
+- Drag inside the area to **move** it, or drag its edges and corners to **resize** it. Edges snap to
+  the screen edges.
+- Pick an **aspect ratio** (Free, 16:9, 4:3, 1:1 or 9:16 for vertical video), or type an exact
+  **width and height**. Sizes are the video's pixel size.
+- Keyboard: arrow keys move the area (<kbd>Shift</kbd> for 10 pixels at a time), <kbd>Alt</kbd>
+  with arrow keys resizes it, <kbd>Ctrl</kbd>+<kbd>A</kbd> selects the whole screen.
+- Press **Record** or <kbd>Enter</kbd> to start, or <kbd>Esc</kbd> to cancel.
+
+Your camera bubble stays above the dimmed screen, so you can place it inside the area (it is
+recorded) or outside it (it isn't). While recording, a thin red frame (amber when paused) marks the
+area; the frame is never part of the video. Next time, Kadr starts from the same area, so
+<kbd>Enter</kbd> records it again.
 
 ## Settings
 
@@ -87,9 +109,10 @@ Open **Settings** in the control panel:
   **Mirror camera**.
 - **Countdown** — turn the countdown and its sound on or off.
 - **Audio** — record system audio (sound playing on your computer). Windows only for now.
-- **More** — appearance (light, dark or system), **Open Kadr at login** (Windows and macOS: start
-  quietly in the tray), [updates](#updates), and **Help and feedback** (this guide, reporting a
-  problem with your version prefilled, privacy, source code).
+- **More** — appearance (light, dark or system), **Copy recordings to clipboard** (on by default),
+  **Open Kadr at login** (Windows and macOS: start quietly in the tray), [updates](#updates), and
+  **Help and feedback** (this guide, reporting a problem with your version prefilled, privacy, source
+  code).
 
 ## Keyboard shortcuts
 
@@ -101,7 +124,7 @@ Shortcuts work from any app while Kadr is running:
 | Pause / resume         | <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> |
 
 If another app already uses a shortcut, Kadr picks the next free one and shows it in the control
-panel and toolbar tooltips.
+panel and toolbar tooltips. The start / stop shortcut also cancels picking a region.
 
 ## Updates
 

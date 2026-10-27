@@ -6,8 +6,14 @@ import {
   stopStreams,
   TrackRecorder,
 } from "@kadr/recorder-core";
-import type { AppSettings, SessionCommand, SessionSnapshot } from "../../../shared/api";
+import type {
+  AppSettings,
+  RegionSelection,
+  SessionCommand,
+  SessionSnapshot,
+} from "../../../shared/api";
 import { elapsedMs, IDLE_SNAPSHOT } from "../../../shared/session";
+import { canCropVideo, cropVideoTrack } from "./crop";
 import { describeMediaError } from "./media-errors";
 
 interface Capture {
@@ -54,6 +60,15 @@ export class RecordingEngine {
     if (this.snapshot.status === "idle") this.update({ lastResult: null, error: null });
   }
 
+  /** Puts the last recording on the clipboard (again). Rejects when the copy fails. */
+  async copyResult(): Promise<void> {
+    const result = this.snapshot.lastResult;
+    if (!result) return;
+    await window.kadr.shell.copyToClipboard(result.path);
+    if (this.snapshot.lastResult === result)
+      this.update({ lastResult: { ...result, copied: true } });
+  }
+
   private async run(command: SessionCommand): Promise<void> {
     const { status } = this.snapshot;
     const active = status === "recording" || status === "paused";
@@ -90,17 +105,28 @@ export class RecordingEngine {
 
   private async start(): Promise<void> {
     const settings = await window.kadr.settings.get();
-    const { mode } = settings.recording;
+    const { mode, captureArea } = settings.recording;
     this.update({ ...IDLE_SNAPSHOT, status: "preparing", mode });
 
-    this.capture = await this.acquire(settings);
+    let region: RegionSelection | null = null;
+    if (mode !== "camera" && captureArea === "region") {
+      if (!canCropVideo()) throw new Error("Recording a region isn't supported on this system.");
+      region = await window.kadr.region.select();
+      if (!region) {
+        // Picker cancelled: back to the panel, nothing to report.
+        this.update({ ...IDLE_SNAPSHOT, mode });
+        return;
+      }
+    }
+
+    this.capture = await this.acquire(settings, region);
     this.update({ microphone: this.capture.microphone ? "on" : "unavailable" });
 
     await this.beginTake();
     await this.countdownThenRecord(settings);
   }
 
-  private async acquire(settings: AppSettings): Promise<Capture> {
+  private async acquire(settings: AppSettings, region: RegionSelection | null): Promise<Capture> {
     const streams: MediaStream[] = [];
     try {
       let video: MediaStreamTrack | undefined;
@@ -125,6 +151,11 @@ export class RecordingEngine {
         video = screen.getVideoTracks()[0];
         // Stop cleanly if capture ends from outside (display unplugged, access revoked).
         video?.addEventListener("ended", () => void this.dispatch("stop"), { once: true });
+        if (video && region) {
+          video = cropVideoTrack(video, region.area, region.display);
+          // Released with the other streams, which stops the cropped track too.
+          streams.push(new MediaStream([video]));
+        }
       }
       if (!video) throw new Error("No video track available");
 
@@ -216,10 +247,19 @@ export class RecordingEngine {
     const path = await window.kadr.recording.finish(take.id);
     this.take = null;
     this.releaseCapture();
+    // Read now, not at start: the setting may have changed during the recording. A failed copy
+    // never costs the recording; the panel offers to copy again.
+    const { recording } = await window.kadr.settings.get();
+    const copied =
+      recording.copyToClipboard &&
+      (await window.kadr.shell.copyToClipboard(path).then(
+        () => true,
+        () => false,
+      ));
     this.update({
       ...IDLE_SNAPSHOT,
       mode: this.snapshot.mode,
-      lastResult: { path, durationMs, sizeBytes: take.stats.bytes },
+      lastResult: { path, durationMs, sizeBytes: take.stats.bytes, copied },
     });
   }
 

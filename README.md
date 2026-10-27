@@ -44,11 +44,11 @@ depends on your device’s available memory; use shorter takes for important mat
 |                           | Web recorder                                                      | Desktop app                                                        |
 | ------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------ |
 | Get started               | [Open in your browser](https://bilimgram.github.io/kadr/)         | [Download for your OS](https://bilimgram.github.io/kadr/#download) |
-| Screen source             | Pick a screen, window, or browser tab                             | Primary screen, or camera only                                     |
+| Screen source             | Pick a screen, window, or browser tab                             | Primary screen, a region of any screen, or camera only             |
 | Screen, camera, and voice | Yes, with browser permissions                                     | Yes, with system permissions                                       |
 | Camera shapes             | Eight shapes, with live size and position controls                | Eight shapes and a floating webcam bubble                          |
 | Pause and resume          | In the recording studio                                           | Floating toolbar and global shortcuts                              |
-| Video output              | Preview and download an MP4 or WebM, depending on browser support | Saved to your Videos/Kadr folder                                   |
+| Video output              | Preview and download an MP4 or WebM, depending on browser support | Saved to your Videos/Kadr folder and copied, ready to paste        |
 | Install required          | No                                                                | Windows, macOS, or Linux                                           |
 
 System/tab audio depends on the platform and capture source. In a supported browser, enable audio

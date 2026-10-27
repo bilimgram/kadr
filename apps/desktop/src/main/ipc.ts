@@ -18,10 +18,12 @@ import {
   RecordingChunk,
   RecordingExtension,
   RecordingId,
+  Region,
   ScreenCoordinate,
   SessionCommand,
   SessionSnapshot,
 } from "../shared/schemas";
+import { copyFileToClipboard } from "./clipboard";
 import type { RecordingStore } from "./recordings";
 import type { SessionCoordinator } from "./session";
 import type { SettingsStore } from "./settings-store";
@@ -84,6 +86,10 @@ export function registerIpc(deps: IpcDependencies): void {
 
   const isControlWindow = (event: IpcMainEvent | IpcMainInvokeEvent) =>
     BrowserWindow.fromWebContents(event.sender) === windows.control;
+  const senderWindow = (event: IpcMainEvent | IpcMainInvokeEvent) =>
+    BrowserWindow.fromWebContents(event.sender);
+  const isRegionPicker = (event: IpcMainEvent | IpcMainInvokeEvent) =>
+    windows.regionPickerDisplayId(senderWindow(event)) !== null;
 
   // Settings and shortcuts
   handle(Channels.shortcutsGet, [], () => shortcuts);
@@ -149,6 +155,31 @@ export function registerIpc(deps: IpcDependencies): void {
   handle(Channels.shellOpenRecordings, [], async () => {
     const error = await shell.openPath(await recordings.ensureDirectory());
     if (error) throw new Error(error);
+  });
+  handle(Channels.shellCopyFile, [FilePath], async (_event, path) => {
+    assertRecordingPath(path);
+    await copyFileToClipboard(path);
+  });
+
+  // Region picker: started by the recording engine, answered by the picker overlays.
+  handle(Channels.regionSelect, [], (event) => {
+    if (!isControlWindow(event)) throw new Error("Only the recording engine can pick a region");
+    return session.selectRegion();
+  });
+  handle(Channels.regionGetContext, [], (event) => {
+    const context = windows.regionPickerContext(senderWindow(event));
+    if (!context) throw new Error("Not a region picker");
+    return context;
+  });
+  on(Channels.regionUpdate, [Region.nullable()], (event, region) => {
+    const win = senderWindow(event);
+    if (win && isRegionPicker(event)) windows.forwardRegionSelection(region, win);
+  });
+  on(Channels.regionConfirm, [Region], (event, region) => {
+    if (isRegionPicker(event)) session.confirmRegion(region);
+  });
+  on(Channels.regionCancel, [], (event) => {
+    if (isRegionPicker(event)) session.finishRegion(null);
   });
 
   // Floating windows (toolbar, bubble)

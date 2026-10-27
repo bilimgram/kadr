@@ -679,6 +679,87 @@
   transition-delay: 250ms;
 }
 
+[data-tooltip-placement="top"]::after,
+[data-tooltip-placement="top-end"]::after {
+  top: auto;
+  bottom: calc(100% + 8px);
+}
+
+[data-tooltip-placement="bottom"]::after {
+  top: calc(100% + 8px);
+}
+
+[data-tooltip-placement="top"]::after,
+[data-tooltip-placement="bottom"]::after {
+  left: 50%;
+  transform: translate(-50%, 4px);
+}
+
+[data-tooltip-placement="top-end"]::after {
+  left: auto;
+  right: 0;
+  transform: translate(0, 4px);
+}
+
+[data-tooltip-placement="top"]:hover::after,
+[data-tooltip-placement="top"]:focus-visible::after,
+[data-tooltip-placement="bottom"]:hover::after,
+[data-tooltip-placement="bottom"]:focus-visible::after {
+  transform: translate(-50%, 0);
+}
+
+[data-tooltip-placement="top-end"]:hover::after,
+[data-tooltip-placement="top-end"]:focus-visible::after {
+  transform: translate(0, 0);
+}
+
+[data-tooltip][data-tooltip-hidden]::after {
+  opacity: 0;
+  transition-delay: 0s;
+}
+
+/* ---------- Icon button (icon only, with a tooltip) ---------- */
+
+.k-icon-button {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: var(--k-radius-sm);
+  background: transparent;
+  color: var(--k-text-muted);
+  cursor: pointer;
+  transition:
+    background var(--k-duration) var(--k-ease),
+    color var(--k-duration) var(--k-ease);
+}
+
+.k-icon-button--sm {
+  width: 28px;
+  height: 28px;
+}
+
+.k-icon-button--md {
+  width: 32px;
+  height: 32px;
+}
+
+.k-icon-button .k-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.k-icon-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--k-text) 8%, transparent);
+  color: var(--k-text);
+}
+
+.k-icon-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* ---------- Countdown ---------- */
 
 .k-countdown {

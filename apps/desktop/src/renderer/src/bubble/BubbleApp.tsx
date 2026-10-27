@@ -154,7 +154,8 @@ export function BubbleApp() {
 
   // Drawn right away (default shape until settings arrive), so the bubble never appears blank.
   const shape = getBubbleShape(settings?.bubble.shape ?? "circle");
-  const spinnerSize = Math.max(22, Math.min(44, Math.round(window.innerHeight * 0.17)));
+  // About a quarter of the bubble: easy to see at every size.
+  const spinnerSize = Math.max(32, Math.min(60, Math.round(window.innerHeight * 0.24)));
   const shapeStyle: CSSProperties =
     shape.kind === "path"
       ? { clipPath: `url(#${CLIP_ID})` }

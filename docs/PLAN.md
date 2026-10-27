@@ -105,7 +105,8 @@ Estimates assume 1–2 engineers working with Claude Code. Each phase has measur
 > **Progress (2026-10-27):** done — tray-based control panel, live bubble with shapes and light
 > correction, 3-2-1 countdown with sound, floating recording toolbar (stop, pause, restart, discard,
 > mic mute, camera toggle), global shortcuts with fallbacks, persisted settings, Loom-sized bubble.
-> Next — WebCodecs pipeline with separate tracks, Mode B, source picker, event log, benchmarks.
+> Region recording with a multi-display area picker and copy-to-clipboard landed 2026-10-28.
+> Next — WebCodecs pipeline with separate tracks, Mode B, window source, event log, benchmarks.
 - Control bar (screen / window / region / camera-only modes), device pickers, 3-2-1 countdown,
   pause/resume/restart/discard, global hotkeys, tray.
 - Live bubble: drag, resize presets, shapes (circle, squircle, rounded, hexagon, heart, blob, 16:9 card,
