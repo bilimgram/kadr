@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/assets/logo.svg" alt="" width="96" height="96" />
+
 # Kadr
 
 **The open-source, local-first screen recorder.**<br/>
@@ -12,7 +14,8 @@ your recordings never leave your computer unless you share them.
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 [**Try it in your browser**](https://bilimgram.github.io/kadr/) ·
-[Download](https://github.com/bilimgram/kadr/releases) ·
+[Download](https://github.com/bilimgram/kadr/releases/latest) ·
+[User guide](docs/USER_GUIDE.md) ·
 [Roadmap](docs/PLAN.md) ·
 [Contributing](CONTRIBUTING.md) ·
 [Discussions](https://github.com/bilimgram/kadr/discussions)
@@ -21,7 +24,7 @@ your recordings never leave your computer unless you share them.
 
 > [!NOTE]
 > Kadr is in **early preview**. The recorder works today; editing, AI and sharing are on the
-> [roadmap](#roadmap). It's a great time to shape the project — see [how to help](#contributing).
+> [roadmap](docs/PLAN.md). It's a great time to shape the project — see [how to help](#contributing).
 
 ## Why Kadr
 
@@ -41,7 +44,8 @@ subscription-gated. Kadr is the alternative we wanted:
 
 **Available now**
 
-- 🎥 **Screen + camera + mic** — record any screen or window, with optional system audio (desktop).
+- 🎥 **Screen + camera + mic** — record your screen, or just your camera; system audio on Windows.
+  In the browser, pick any screen, window or tab.
 - 🫧 **Live webcam bubble in your shape** — circle, squircle, rounded square, hexagon, heart, blob,
   16:9 card or 9:16 portrait; small, medium or large; drag it anywhere.
 - ✨ **Automatic light correction** — GPU "touch-up" meters your face and brightens underexposed
@@ -63,11 +67,11 @@ subscription-gated. Kadr is the alternative we wanted:
 
 ## Get Kadr
 
-| Platform                  | How                                                                                                         |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| **Browser**               | Open [bilimgram.github.io/kadr](https://bilimgram.github.io/kadr/) in Chrome or Edge (others: best effort). |
-| **Windows, macOS, Linux** | Download the installer from [Releases](https://github.com/bilimgram/kadr/releases) _(first release soon)_.  |
-| **From source**           | See [Development](#development) below.                                                                      |
+| Platform                  | How                                                                                                                                  |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **Browser**               | Open [bilimgram.github.io/kadr](https://bilimgram.github.io/kadr/) in Chrome or Edge (others: best effort).                          |
+| **Windows, macOS, Linux** | Download the [latest release](https://github.com/bilimgram/kadr/releases/latest) — see the [user guide](docs/USER_GUIDE.md#install). |
+| **From source**           | See [Development](#development) below.                                                                                               |
 
 ## Contributing
 
@@ -124,5 +128,6 @@ and OpenSSF Scorecard.
 
 ## License
 
-[Apache-2.0](LICENSE) © The Kadr Authors. See [NOTICE](NOTICE) for attributions. Kadr is developed by
+[Apache-2.0](LICENSE) © The Kadr Authors. See [NOTICE](NOTICE) for attributions and
+[PRIVACY.md](PRIVACY.md) for what Kadr does (and doesn't do) with your data. Kadr is developed by
 [Bilimgram](https://bilimgram.uz) and contributors. "Kadr" means "frame" in Uzbek.

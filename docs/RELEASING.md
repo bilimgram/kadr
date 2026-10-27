@@ -47,28 +47,29 @@ Cloudflare R2 (electron-builder's `generic` provider). There is no update server
 
 ### Configuration
 
-| Name              | Where                | Purpose                                                                            |
-| ----------------- | -------------------- | ---------------------------------------------------------------------------------- |
-| `KADR_UPDATE_URL` | Actions **variable** | Public feed URL baked into builds, e.g. `https://updates.example.com/kadr/desktop` |
-| `R2_PUBLIC_URL`   | Actions **variable** | Public base URL of the bucket; `KADR_UPDATE_URL` must be a path under it           |
-| `R2_ENDPOINT`     | Actions **secret**   | S3 API endpoint, `https://<account-id>.r2.cloudflarestorage.com`                   |
-| `R2_BUCKET`       | Actions **secret**   | Bucket name                                                                        |
-| `R2_ACCESS_KEY`   | Actions **secret**   | R2 API token access key ID (Object Read & Write, scoped to the bucket)             |
-| `R2_SECRET_KEY`   | Actions **secret**   | R2 API token secret                                                                |
-| `R2_REGION`       | optional             | Defaults to `auto`                                                                 |
+| Name              | Where                | Purpose                                                                                                               |
+| ----------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `KADR_UPDATE_URL` | Actions **variable** | Public feed URL baked into builds; defaults to `https://updates.bilimgram.uz/kadr/desktop`                            |
+| `R2_PUBLIC_URL`   | Actions **variable** | Public base URL of the bucket (defaults to `https://updates.bilimgram.uz`); `KADR_UPDATE_URL` must be a path under it |
+| `R2_ENDPOINT`     | Actions **secret**   | S3 API endpoint, `https://<account-id>.r2.cloudflarestorage.com`                                                      |
+| `R2_BUCKET`       | Actions **secret**   | Bucket name                                                                                                           |
+| `R2_ACCESS_KEY`   | Actions **secret**   | R2 API token access key ID (Object Read & Write, scoped to the bucket)                                                |
+| `R2_SECRET_KEY`   | Actions **secret**   | R2 API token secret                                                                                                   |
+| `R2_REGION`       | optional             | Defaults to `auto`                                                                                                    |
 
 For local releases, put the same names in the repository-root `.env` (gitignored; template in
 `.env.example`). Never commit credentials: the repository is public.
 
-**Use a custom domain for the feed before the first public release.** Installed apps keep polling
-the URL they were built with for as long as they are installed, so it must never change. The
-`r2.dev` development URL is rate-limited and not meant for production; connect a domain you
-control to the bucket (R2 → Settings → Custom Domains, e.g. `updates.bilimgram.uz`) and use that.
+**The official feed is `https://updates.bilimgram.uz/kadr/desktop`**: the bucket's custom domain
+(R2 → bucket → Settings → Custom Domains), with feed objects under the `kadr/desktop/` prefix.
+Installed apps keep polling the URL they were built with for as long as they are installed, so
+keep it serving. Don't use the rate-limited `r2.dev` development URL for releases.
 
 ### Release steps
 
-1. Bump `apps/desktop/package.json` `version` (normally via the version PR). Use a prerelease tag
-   (`1.3.0-beta.1`) for beta-only releases.
+1. Bump the version with Changesets (normally via the version PR, or `corepack pnpm changeset
+   version` locally); it also writes `apps/desktop/CHANGELOG.md`, which becomes the release notes.
+   Use a prerelease tag (`1.3.0-beta.1`) for beta-only releases.
 2. Tag and push: `git tag desktop-v1.3.0 && git push origin desktop-v1.3.0`.
 3. The **Desktop release** workflow builds Windows, macOS and Linux installers (signed when the
    secrets below exist). The `publish` job runs in the `release` environment — add required
@@ -77,7 +78,13 @@ control to the bucket (R2 → Settings → Custom Domains, e.g. `updates.bilimgr
    - uploads installers first and metadata last, so apps never see metadata for files that
      aren't there yet, and refuses to overwrite a version that is already published,
    - reads the public feed back to confirm it serves the new version,
-   - attaches build provenance (Sigstore) and creates a **draft** GitHub Release.
+   - attaches build provenance (Sigstore), writes an SPDX software bill of materials, and publishes
+     the GitHub Release with every installer, the update metadata and the SBOM (prerelease for
+     versions like `1.3.0-beta.1`, "Latest" otherwise).
+
+   Without the R2 secrets the feed upload is skipped with a warning and the release goes to GitHub
+   only; publish it to the feed later by downloading its assets into `apps/desktop/release/<version>/`
+   and running `node apps/desktop/scripts/publish-update.mjs`.
 4. Installed apps pick the release up on their next check (within 4 hours).
 
 **Smoke-test before tagging** (record, pause, restart, discard, stop; tray; shortcuts; an update

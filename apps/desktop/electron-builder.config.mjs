@@ -5,6 +5,7 @@ import { loadReleaseEnv, updateFeedUrl } from "./scripts/release-env.mjs";
 // package.json declares a range (pnpm catalog); package exactly the version the lockfile installed.
 const electronVersion = createRequire(import.meta.url)("electron/package.json").version;
 const feedUrl = updateFeedUrl(loadReleaseEnv());
+const macSigned = Boolean(process.env.CSC_LINK);
 if (!feedUrl) {
   console.warn(
     "[electron-builder] KADR_UPDATE_URL is not set: this build will not receive automatic updates.",
@@ -36,7 +37,12 @@ export default {
 
   mac: {
     category: "public.app-category.productivity",
-    hardenedRuntime: true,
+    // With a Developer ID certificate (CSC_LINK): signed, hardened and notarized. Without one, an
+    // ad-hoc signature, because Apple Silicon refuses to launch apps with no valid signature at
+    // all; the hardened runtime is off then, since its library validation rejects Electron's
+    // frameworks under an ad-hoc identity.
+    identity: macSigned ? undefined : "-",
+    hardenedRuntime: macSigned,
     entitlements: "build/entitlements.mac.plist",
     entitlementsInherit: "build/entitlements.mac.plist",
     extendInfo: {
@@ -63,6 +69,9 @@ export default {
   },
   linux: {
     category: "AudioVideo",
+    executableName: "kadr",
+    maintainer: "Bilimgram <hello@bilimgram.uz>",
+    synopsis: "Open-source, local-first screen recorder with a live webcam bubble",
     // AppImage updates itself; deb is updated through the package manager.
     target: [
       { target: "AppImage", arch: ["x64"] },
