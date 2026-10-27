@@ -31,7 +31,8 @@ jobs:
   build:
     name: Build / ${{ matrix.os }}
     strategy:
-      fail-fast: true
+      # Let every platform finish, so one failure doesn't hide another.
+      fail-fast: false
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
@@ -57,7 +58,10 @@ jobs:
             exit 1
           fi
       - name: Package
-        run: pnpm --filter @kadr/desktop dist
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --filter @kadr/desktop dist 2>&1 | tee "$RUNNER_TEMP/dist.log"
         env:
           # macOS signing + notarization (Apple Developer ID); unsigned when absent.
           CSC_LINK: ${{ secrets.MAC_CERTIFICATE_P12_BASE64 }}
@@ -70,6 +74,21 @@ jobs:
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      - name: Report packaging errors
+        if: failure()
+        shell: bash
+        # Annotations show on the run page (and in the API) without signing in; logs don't.
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const log = fs.readFileSync(process.env.RUNNER_TEMP + "/dist.log", "utf8")
+              .replace(/\x1b\[[0-9;]*m/g, "").trim().split(/\r?\n/);
+            const escape = (s) => s.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+            for (const line of log.filter((l) => /⨯|error/i.test(l)).slice(0, 8)) {
+              console.log("::error title=Package::" + escape(line.trim()));
+            }
+            console.log("::error title=Package log (last lines)::" + escape(log.slice(-30).join("\n")));
+          '
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: desktop-${{ matrix.os }}
