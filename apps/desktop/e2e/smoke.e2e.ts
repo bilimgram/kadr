@@ -337,6 +337,17 @@ function regionPickerCount(): Promise<number> {
   );
 }
 
+/**
+ * Presses a key that closes the page it is pressed in (Escape in the region picker). The window
+ * can be gone before Playwright hears back, which it reports as a closed page; the assertions that
+ * follow check what actually happened.
+ */
+async function pressClosingKey(page: Page, key: string): Promise<void> {
+  await page.keyboard.press(key).catch((error: unknown) => {
+    if (!String(error).includes("closed")) throw error;
+  });
+}
+
 function sessionStatus(): Promise<string> {
   return inPage<string>("control", "window.kadr.session.get().then((s) => s.status)");
 }
@@ -392,9 +403,8 @@ test("the region picker opens on Start, selects with the keyboard, and cancels c
   );
   await expect(picker.getByRole("toolbar", { name: "Recording area" })).toBeVisible();
 
-  // Escape gives up: the pickers close and the panel comes back, idle. (Key down only: the window
-  // is gone before a key up could reach it.)
-  await picker.keyboard.down("Escape");
+  // Escape gives up: the pickers close and the panel comes back, idle.
+  await pressClosingKey(picker, "Escape");
   await expect.poll(regionPickerCount).toBe(0);
   await expect.poll(() => isWindowVisible("control")).toBe(true);
   expect(await sessionStatus()).toBe("idle");
@@ -522,7 +532,7 @@ windowsOnly("recording a region captures exactly that area and copies the file",
     await expect(again.locator(".region__size")).toHaveText(
       `${expected.width} × ${expected.height}`,
     );
-    await again.keyboard.down("Escape");
+    await pressClosingKey(again, "Escape");
     await expect.poll(regionPickerCount).toBe(0);
   } finally {
     await app.evaluate(({ clipboard }, text) => clipboard.writeText(text), clipboardText);
