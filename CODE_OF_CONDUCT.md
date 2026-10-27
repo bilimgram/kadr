@@ -9,6 +9,6 @@ for the community. Harassment, discrimination, and personal attacks are not tole
 
 ## Reporting
 
-Report unacceptable behavior to the maintainers at **conduct@kadr.dev** (placeholder — replace before
-launch). All reports are reviewed promptly and kept confidential. Maintainers follow the enforcement
+Report unacceptable behavior to the maintainers at **hello@bilimgram.uz** (subject: "Kadr Code of
+Conduct"). All reports are reviewed promptly and kept confidential. Maintainers follow the enforcement
 guidelines of the Contributor Covenant 2.1.

@@ -63,7 +63,7 @@ For local releases, put the same names in the repository-root `.env` (gitignored
 **Use a custom domain for the feed before the first public release.** Installed apps keep polling
 the URL they were built with for as long as they are installed, so it must never change. The
 `r2.dev` development URL is rate-limited and not meant for production; connect a domain you
-control to the bucket (R2 → Settings → Custom Domains, e.g. `updates.kadr.dev`) and use that.
+control to the bucket (R2 → Settings → Custom Domains, e.g. `updates.bilimgram.uz`) and use that.
 
 ### Release steps
 
@@ -123,7 +123,7 @@ warning on first install, and macOS builds can't auto-update.
 ### Verifying a release artifact
 
 ```bash
-gh attestation verify Kadr-Setup-1.3.0.exe --repo <owner>/kadr
+gh attestation verify Kadr-Setup-1.3.0.exe --repo bilimgram/kadr
 ```
 
 ## Release checklist

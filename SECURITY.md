@@ -4,10 +4,10 @@
 
 Please **do not** open public issues for security problems.
 
-Report privately through GitHub's
-[private vulnerability reporting](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability)
-("Report a vulnerability" on the Security tab), or email **security@kadr.dev** (placeholder — replace
-before launch).
+Report privately through GitHub's private vulnerability reporting:
+[**Report a vulnerability**](https://github.com/bilimgram/kadr/security/advisories/new) (Security tab
+→ "Report a vulnerability"). If you can't use GitHub, email **hello@bilimgram.uz** with "Kadr
+security" in the subject.
 
 Include affected version, platform, reproduction steps, and impact. We aim to:
 

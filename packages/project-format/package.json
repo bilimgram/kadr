@@ -3,6 +3,15 @@
   "version": "0.0.0",
   "description": "Schemas for the Kadr recording bundle: manifest, event log, transcript and edit plans.",
   "license": "Apache-2.0",
+  "homepage": "https://github.com/bilimgram/kadr#readme",
+  "bugs": {
+    "url": "https://github.com/bilimgram/kadr/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bilimgram/kadr.git",
+    "directory": "packages/project-format"
+  },
   "type": "module",
   "sideEffects": false,
   "exports": {

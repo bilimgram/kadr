@@ -4,6 +4,15 @@
   "private": true,
   "description": "Kadr desktop app: screen recorder with a live, shaped webcam bubble.",
   "license": "Apache-2.0",
+  "homepage": "https://github.com/bilimgram/kadr#readme",
+  "bugs": {
+    "url": "https://github.com/bilimgram/kadr/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bilimgram/kadr.git",
+    "directory": "apps/desktop"
+  },
   "author": "The Kadr Authors",
   "main": "./out/main/index.js",
   "scripts": {

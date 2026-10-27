@@ -1,15 +1,5 @@
-# Code owners per area (see GOVERNANCE.md). Security-sensitive paths need two approvals.
-# "@kadr-dev/..." teams are placeholders — replace with the real GitHub organization and teams.
+# Code owners (see GOVERNANCE.md). The founding maintainer owns every path until area maintainers
+# join; then security-sensitive paths (Electron main process and preload, release pipeline and
+# update feed, native code, .github/) get their own owners and require two approvals.
 
-*                           @kadr-dev/maintainers
-
-/apps/desktop/src/main/     @kadr-dev/desktop @kadr-dev/security
-/apps/desktop/src/preload/  @kadr-dev/desktop @kadr-dev/security
-/apps/desktop/electron-builder.config.mjs @kadr-dev/desktop @kadr-dev/security
-/apps/desktop/scripts/       @kadr-dev/desktop @kadr-dev/security
-/apps/web/                  @kadr-dev/web
-/packages/project-format/   @kadr-dev/format
-/packages/ai-editor/        @kadr-dev/ai
-/crates/                    @kadr-dev/native
-/.github/                   @kadr-dev/security
-/docs/adr/                  @kadr-dev/maintainers
+* @jakhongir-abdukhamidov
