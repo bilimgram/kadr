@@ -12,6 +12,7 @@ An ADR is immutable once accepted; to change a decision, write a new ADR that su
 | [0005](0005-ai-edits-as-declarative-edit-plans.md)   | AI edits as declarative, validated edit plans (BYOK)                     | Accepted |
 | [0006](0006-monorepo-tooling.md)                     | Monorepo tooling: pnpm, Turborepo, TypeScript, Biome, Vitest, Changesets | Accepted |
 | [0007](0007-region-recording-by-cropping-capture.md) | Region recording by cropping the display capture                         | Accepted |
+| [0008](0008-ai-director-cloud-voice-editing.md)      | AI Director: cloud speech-to-text and voice-driven edit plans            | Proposed |
 
 ## Template
 

@@ -132,6 +132,10 @@ zero data loss when the app is killed mid-recording (≤ 2 s of footage lost).
 
 ### Phase 3 — AI editing, BYOK (4–6 weeks)
 
+> **Plan (2026-10-28):** the first AI release is the **AI Director**: voice commands and a live
+> to-do list of edits built while recording, with the user's OpenAI or Gemini key. See
+> [AI_DIRECTOR.md](AI_DIRECTOR.md) and [ADR-0008](adr/0008-ai-director-cloud-voice-editing.md).
+> Local transcription and models follow in a later release.
 - Transcription: local whisper.cpp (default, free) or cloud providers; live streaming transcription
   during capture so results are ready at stop.
 - Deterministic pre-pass (no AI needed): silence and filler-word detection.
