@@ -1,6 +1,6 @@
 {
   "name": "@kadr/compositor",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Bubble shapes, layout math, camera effects (light correction, person segmentation, backgrounds) and a canvas compositor for Kadr recordings.",
   "license": "Apache-2.0",
   "private": true,

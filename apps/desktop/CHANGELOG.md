@@ -1,5 +1,27 @@
 # @kadr/desktop
 
+## 0.3.0
+
+### Minor Changes
+
+- **Camera backgrounds.** In Settings → Bubble → Background, blur the room behind you (light,
+  medium or strong), remove it so only you float over the screen, or replace it with a colour
+  gradient or your own picture. Kadr finds you in the picture with a small model that runs on your
+  computer: nothing is uploaded, and it works offline. Camera-only recordings now get the same
+  effects as the bubble.
+- **Better light correction.** Kadr now lights your face wherever you sit, brightens you more than
+  the room, removes the orange or blue tint of bulbs and daylight, and keeps the picture from
+  looking flat.
+- **Notes while recording.** Made a mistake, or want something added later? Press the note button on
+  the toolbar (or Alt+Shift+N) and say what to fix, for example "cut the last few seconds, I'm
+  saying it again", then carry on. Kadr marks the moment and where your pointer was. When you stop,
+  it saves `… notes.md` and a `.kadr` folder next to the video, ready for you or an AI to edit from;
+  retakes and "cut the last N seconds" become suggested cuts.
+- **Spoken notes (optional, off by default).** Add your own OpenAI API key in Settings → Notes and
+  turn on **Listen for spoken notes**, then just say "add a note" (or "eslatma qoʻsh", "добавь
+  заметку") without pressing anything. Only your speech is sent, to your own OpenAI account; see
+  PRIVACY.md.
+
 ## 0.2.0
 
 ### Minor Changes

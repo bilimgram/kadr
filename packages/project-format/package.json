@@ -1,6 +1,6 @@
 {
   "name": "@kadr/project-format",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Schemas for the Kadr recording bundle: manifest, event log, transcript and edit plans.",
   "license": "Apache-2.0",
   "homepage": "https://github.com/bilimgram/kadr#readme",

@@ -1,6 +1,6 @@
 {
   "name": "@kadr/recorder-core",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Browser recording primitives for Kadr: clock, event log, track recorder and audio mixing.",
   "license": "Apache-2.0",
   "private": true,

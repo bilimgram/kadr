@@ -1,5 +1,15 @@
 # @kadr/web
 
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @kadr/compositor@0.1.0
+  - @kadr/ui@0.3.0
+  - @kadr/project-format@0.1.0
+  - @kadr/recorder-core@0.1.0
+
 ## 0.1.1
 
 ### Patch Changes

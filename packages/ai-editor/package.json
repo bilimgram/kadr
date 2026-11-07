@@ -1,6 +1,6 @@
 {
   "name": "@kadr/ai-editor",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Provider-agnostic AI editing for Kadr: context building, heuristics and edit-plan validation.",
   "license": "Apache-2.0",
   "private": true,
