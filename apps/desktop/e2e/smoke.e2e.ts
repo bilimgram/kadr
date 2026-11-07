@@ -94,11 +94,19 @@ async function launchApp(extraArgs: readonly string[] = []): Promise<ElectronApp
   });
 }
 
+/**
+ * Tag for tests that need Chromium's fake camera (a moving test pattern, no person) and
+ * microphone. They get it from launch: closing Kadr right after it starts, to relaunch with the
+ * flag, can hang Playwright on Linux (see `windowsOnly`).
+ */
+const FAKE_DEVICES = "@fake-devices";
+
 test.beforeEach(async () => {
   // A throwaway profile: real settings stay untouched, and the single-instance lock doesn't clash
   // with a Kadr that is already running.
   userDataDir = mkdtempSync(join(tmpdir(), "kadr-e2e-"));
-  app = await launchApp();
+  const fakeDevices = test.info().tags.includes(FAKE_DEVICES);
+  app = await launchApp(fakeDevices ? ["--use-fake-device-for-media-stream"] : []);
 });
 
 /**
@@ -547,17 +555,17 @@ windowsOnly("recording a region captures exactly that area and copies the file",
   }
 });
 
-/** Relaunches with Chromium's fake camera (a moving test pattern, no person) and microphone. */
-async function relaunchWithFakeDevices(): Promise<Page> {
-  await app.close();
-  app = await launchApp(["--use-fake-device-for-media-stream"]);
+/** The control panel, once its settings have loaded. */
+async function readyPanel(): Promise<Page> {
   const panel = await windowFor("control");
   await expect(panel.getByRole("button", { name: "Start recording" })).toBeVisible();
   return panel;
 }
 
-test("camera backgrounds run on-device segmentation under the app's CSP", async () => {
-  const panel = await relaunchWithFakeDevices();
+test("camera backgrounds run on-device segmentation under the app's CSP", {
+  tag: FAKE_DEVICES,
+}, async () => {
+  const panel = await readyPanel();
   const bubble = await windowFor("bubble");
   const webgl = await bubble.evaluate(() =>
     Boolean(document.createElement("canvas").getContext("webgl2")),
@@ -598,8 +606,10 @@ test("camera backgrounds run on-device segmentation under the app's CSP", async 
     .toBe(true);
 });
 
-test("notes made while recording are saved next to the video", async () => {
-  const panel = await relaunchWithFakeDevices();
+test("notes made while recording are saved next to the video", {
+  tag: FAKE_DEVICES,
+}, async () => {
+  const panel = await readyPanel();
   await panel.evaluate(async () => {
     const { bubble } = await window.kadr.settings.get();
     await window.kadr.settings.update({
