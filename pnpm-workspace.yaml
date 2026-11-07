@@ -6,16 +6,16 @@ packages:
 catalog:
   # Exact: 1.x releases send usage metrics to Google; check before upgrading (ADR 0009).
   "@mediapipe/tasks-vision": 0.10.35
-  "@types/node": ^26.6.5
+  "@types/node": ^26.6.6
   "@types/react": ^19.3.0
   "@types/react-dom": ^19.3.0
-  "@vitejs/plugin-react": ^6.1.2
-  lucide-react: ^1.61.0
+  "@vitejs/plugin-react": ^6.2.1
+  lucide-react: ^1.68.0
   react: ^19.3.1
   react-dom: ^19.3.1
   typescript: ^7.0.2
   vite: ^8.3.5
-  vitest: ^5.0.5
+  vitest: ^5.1.0
   zod: ^4.6.7
 
 # Flat node_modules: recommended by electron-builder for pnpm, and keeps paths short enough for
