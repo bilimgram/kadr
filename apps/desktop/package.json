@@ -28,7 +28,7 @@
     "release": "pnpm run dist && pnpm run publish:update"
   },
   "devDependencies": {
-    "@aws-sdk/client-s3": "^3.1156.0",
+    "@aws-sdk/client-s3": "^3.1161.0",
     "@kadr/ai-editor": "workspace:*",
     "@kadr/compositor": "workspace:*",
     "@kadr/project-format": "workspace:*",
@@ -40,7 +40,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
-    "electron": "^45.0.0",
+    "electron": "^45.2.2",
     "electron-builder": "^26.18.0",
     "electron-vite": "^6.0.0",
     "lucide-react": "catalog:",
