@@ -4,6 +4,10 @@
 > **Decision record:** [ADR-0008](adr/0008-ai-director-cloud-voice-editing.md)
 >
 > The first AI release, replacing the start of [PLAN.md Phase 3](PLAN.md#phase-3--ai-editing-byok-46-weeks).
+>
+> **Already in place:** notes while recording ([ADR-0010](adr/0010-notes-while-recording.md))
+> provide the microphone tap, speech detection, OpenAI transcription, key storage and `note` events
+> that M1 and M2 build on.
 
 AI Director listens while you record and builds a **live to-do list of edits**: what to cut, what
 to retake, which pauses to remove, where chapters go, and what you should re-record before you stop.

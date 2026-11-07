@@ -1,5 +1,10 @@
 export { ActivityIndicator, type ActivityIndicatorProps } from "./ActivityIndicator";
 export { Alert, type AlertProps } from "./Alert";
+export {
+  type BackgroundChoice,
+  BackgroundPicker,
+  type BackgroundPickerProps,
+} from "./BackgroundPicker";
 export { Button, type ButtonProps } from "./Button";
 export { Countdown, type CountdownProps } from "./Countdown";
 export { ErrorBoundary, type ErrorBoundaryProps } from "./ErrorBoundary";
@@ -12,3 +17,4 @@ export { ShapeIcon } from "./ShapeIcon";
 export { ShapePicker } from "./ShapePicker";
 export { Switch } from "./Switch";
 export { type Beeper, createBeeper, GO_TONE_MS } from "./sounds";
+export { TextField, type TextFieldProps } from "./TextField";

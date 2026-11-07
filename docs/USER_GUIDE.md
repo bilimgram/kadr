@@ -105,14 +105,52 @@ area; the frame is never part of the video. Next time, Kadr starts from the same
 Open **Settings** in the control panel:
 
 - **Bubble** — shape (circle, squircle, rounded square, hexagon, heart, blob, 16:9 card, 9:16
-  portrait), size, **Light correction** (brightens a dim or backlit face automatically), and
-  **Mirror camera**.
+  portrait), size, **Background** (see below), **Light correction** (lights your face, not the
+  room, and fixes colour casts from warm bulbs or daylight), and **Mirror camera**.
 - **Countdown** — turn the countdown and its sound on or off.
 - **Audio** — record system audio (sound playing on your computer). Windows only for now.
+- **Notes** — [notes while recording](#notes-while-recording), and your OpenAI key for spoken notes.
 - **More** — appearance (light, dark or system), **Copy recordings to clipboard** (on by default),
   **Open Kadr at login** (Windows and macOS: start quietly in the tray), [updates](#updates), and
   **Help and feedback** (this guide, reporting a problem with your version prefilled, privacy, source
   code).
+
+### Camera backgrounds
+
+Pick what is behind you in **Settings → Bubble → Background**:
+
+- **None** shows your room as it is.
+- **Blur** softens the room (light, medium or strong) while you stay sharp.
+- **Remove** shows only you, floating over your screen.
+- A **colour** gives you a clean gradient behind you.
+- **Your image** uses a picture you choose with **Choose image…**. It's kept on your computer.
+
+Kadr finds you in the picture with a small model that runs on your computer; nothing is uploaded,
+and it works offline. It works best when you are well lit and the camera can see your head and
+shoulders. In **Camera only** recordings, **Remove** uses the colour you picked last, because a
+video can't be see-through.
+
+## Notes while recording
+
+Made a mistake, or want a zoom or a chart added later? Leave a note instead of starting over:
+
+1. While recording, press the **note** button on the toolbar (or <kbd>Alt</kbd>+<kbd>Shift</kbd>+
+   <kbd>N</kbd>).
+2. Say what to fix, for example "cut the last few seconds, I'm saying it again" or "put a chart
+   here". Then carry on.
+
+Kadr marks the moment, where your pointer was ("here") and the time you spoke. When you stop, it
+saves next to the video:
+
+- **`… notes.md`**: a list of your notes with their time in the video, where your pointer was, and
+  the cuts they suggest. Hand it to any AI or editor together with the video.
+- **A `.kadr` folder** with the same notes in Kadr's open format, for Kadr's AI editing.
+
+**Spoken notes:** add your OpenAI API key in **Settings → Notes** and turn on **Listen for spoken
+notes**. Then just say **"add a note"** (or **"eslatma qoʻsh"**, **"добавь заметку"**) followed by
+the note; no button needed. Kadr transcribes your speech with your key while you record (OpenAI
+bills your account), and your notes get their text. Pick the language you speak, or leave it on
+**Auto**. See [PRIVACY.md](../PRIVACY.md) for what is sent.
 
 ## Keyboard shortcuts
 
@@ -122,9 +160,11 @@ Shortcuts work from any app while Kadr is running:
 | ---------------------- | -------------------------------------------- |
 | Start / stop recording | <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> |
 | Pause / resume         | <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> |
+| Add a note             | <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> |
 
 If another app already uses a shortcut, Kadr picks the next free one and shows it in the control
-panel and toolbar tooltips. The start / stop shortcut also cancels picking a region.
+panel and toolbar tooltips. The start / stop shortcut also cancels picking a region. The note
+shortcut is only taken while you record, so other apps can use it the rest of the time.
 
 ## Updates
 

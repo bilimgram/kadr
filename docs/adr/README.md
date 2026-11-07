@@ -13,6 +13,8 @@ An ADR is immutable once accepted; to change a decision, write a new ADR that su
 | [0006](0006-monorepo-tooling.md)                     | Monorepo tooling: pnpm, Turborepo, TypeScript, Biome, Vitest, Changesets | Accepted |
 | [0007](0007-region-recording-by-cropping-capture.md) | Region recording by cropping the display capture                         | Accepted |
 | [0008](0008-ai-director-cloud-voice-editing.md)      | AI Director: cloud speech-to-text and voice-driven edit plans            | Proposed |
+| [0009](0009-on-device-person-segmentation.md)        | On-device person segmentation for camera backgrounds and light           | Proposed |
+| [0010](0010-notes-while-recording.md)                | Notes while recording: shortcut notes and spoken notes                   | Proposed |
 
 ## Template
 

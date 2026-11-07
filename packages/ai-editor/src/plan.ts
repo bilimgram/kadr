@@ -7,7 +7,7 @@ import {
 } from "@kadr/project-format";
 import { detectFillerWords, detectSilences } from "./heuristics";
 
-export const PROMPT_VERSION = "0.1.0";
+export const PROMPT_VERSION = "0.2.0";
 
 /** System prompt for the edit-plan request. Versioned with `PROMPT_VERSION`. */
 export const EDIT_PLAN_SYSTEM_PROMPT = `You edit screen recordings for async video messages.
@@ -16,6 +16,9 @@ changes, markers). Propose an edit plan that makes the video tighter and clearer
 its meaning:
 - cut retakes and false starts (keep the last, best take), filler words, and long silences;
 - treat "marker mistake" events as strong hints that the preceding sentence should be cut;
+- "note" events are the author's own instructions, made while recording: follow them (for example
+  cut a retake they mention or add what they ask for at the pointer position given), and always cut
+  the spoken note itself, since it is meant for the editor, not the audience;
 - add zooms around clicks when small UI details matter, and chapters at topic changes;
 - write a short title and a one-paragraph summary in the transcript's language.
 Return only JSON that matches the provided schema. Express times in microseconds. Give every

@@ -1,4 +1,5 @@
-import { BubbleShapeId } from "@kadr/project-format";
+import { CAMERA_BACKGROUND_MODES } from "@kadr/compositor/background";
+import { BubbleShapeId, RecorderEvent, TimeRange, Transcript } from "@kadr/project-format";
 import { z } from "zod";
 
 /** Runtime validation for persisted settings and every IPC payload crossing into the main process. */
@@ -9,6 +10,19 @@ import { z } from "zod";
 
 export const BubbleSizePreset = z.enum(["small", "medium", "large"]);
 
+export const CameraBackgroundMode = z.enum(CAMERA_BACKGROUND_MODES);
+
+/** What is shown behind the person in the camera bubble (see packages/compositor/src/background.ts). */
+export const CameraBackgroundSettings = z.object({
+  mode: CameraBackgroundMode,
+  /** Blur strength, 0..1. */
+  blur: z.number().min(0).max(1),
+  /** Colour preset for the "color" mode; unknown ids fall back to the first preset. */
+  presetId: z.string().min(1).max(40),
+  /** Changes whenever a new custom image is saved (in the user data folder); null until then. */
+  imageRevision: z.number().int().nonnegative().nullable(),
+});
+
 export const DesktopBubbleSettings = z.object({
   /** Camera bubble on/off (only shown in "screenAndCamera" and "camera" modes). */
   visible: z.boolean(),
@@ -17,6 +31,7 @@ export const DesktopBubbleSettings = z.object({
   mirror: z.boolean(),
   /** Automatic light correction for dark webcam images. */
   touchUp: z.boolean(),
+  background: CameraBackgroundSettings,
   cameraDeviceId: z.string().max(512).optional(),
 });
 
@@ -54,6 +69,18 @@ export const UpdateSettings = z.object({
   automatic: z.boolean(),
 });
 
+/** Language hint for transcribing spoken notes; "auto" lets the provider detect it. */
+export const NotesLanguage = z.enum(["auto", "en", "uz", "ru"]);
+
+export const NotesSettings = z.object({
+  /**
+   * Transcribe the microphone while recording to catch spoken notes ("add a note …"). Off by
+   * default: it sends microphone audio to the user's own OpenAI account (ADR 0010).
+   */
+  listen: z.boolean(),
+  language: NotesLanguage,
+});
+
 export const SystemSettings = z.object({
   /** Start Kadr (hidden, in the tray) when the user signs in to the computer. */
   openAtLogin: z.boolean(),
@@ -65,6 +92,7 @@ export const AppSettings = z.object({
   appearance: AppearanceSettings,
   updates: UpdateSettings,
   system: SystemSettings,
+  notes: NotesSettings,
 });
 
 export const AppSettingsPatch = z.object({
@@ -73,6 +101,7 @@ export const AppSettingsPatch = z.object({
   appearance: AppearanceSettings.partial().optional(),
   updates: UpdateSettings.partial().optional(),
   system: SystemSettings.partial().optional(),
+  notes: NotesSettings.partial().optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -98,6 +127,16 @@ export const RecordingResult = z.object({
   copied: z.boolean(),
 });
 
+/** Notes made during the current recording, for the toolbar. */
+export const NotesStatus = z.object({
+  count: z.number().int().nonnegative(),
+  /** Whether spoken notes are being listened for ("error": the provider failed, see `message`). */
+  listening: z.enum(["off", "on", "error"]),
+  /** The latest note's text, once transcribed. */
+  lastText: z.string().max(300).nullable(),
+  message: z.string().max(300).nullable(),
+});
+
 export const SessionSnapshot = z.object({
   status: SessionStatus,
   mode: RecordingMode,
@@ -108,6 +147,7 @@ export const SessionSnapshot = z.object({
   microphone: z.enum(["on", "muted", "unavailable"]),
   lastResult: RecordingResult.nullable(),
   error: z.string().max(2000).nullable(),
+  notes: NotesStatus,
 });
 
 export const SessionCommand = z.enum([
@@ -120,6 +160,8 @@ export const SessionCommand = z.enum([
   "discard",
   "toggleMicrophone",
   "toggleCamera",
+  /** Mark this moment with a note (the note shortcut or toolbar button). */
+  "addNote",
 ]);
 
 /** Auto-update lifecycle, as shown in the UI. */
@@ -143,6 +185,63 @@ export const UpdateState = z.object({
   lastCheckedAt: z.number().nullable(),
   /** Why updates are disabled, or the last error. */
   message: z.string().max(500).nullable(),
+});
+
+// ---------------------------------------------------------------------------
+// Notes
+// ---------------------------------------------------------------------------
+
+/** Longest audio clip sent for transcription: 30 s of 16 kHz 16-bit mono WAV is ~1 MB. */
+export const MAX_CLIP_BYTES = 2 * 1024 * 1024;
+
+export const AudioClip = z
+  .custom<ArrayBuffer | ArrayBufferView>(
+    (value) => value instanceof ArrayBuffer || ArrayBuffer.isView(value),
+    { message: "Expected binary audio" },
+  )
+  .refine((value) => value.byteLength > 44 && value.byteLength <= MAX_CLIP_BYTES, {
+    message: "Audio clip is empty or too long",
+  });
+
+export const TranscriptionResult = z.object({
+  text: z.string().max(10_000),
+  /** Languages the provider detected, when it says. */
+  languages: z.array(z.string().max(16)).max(8),
+});
+
+/** What the recording engine hands over at stop to be saved next to the video. */
+export const NotesSidecar = z.object({
+  /** Recorded spans on the recording clock (gaps are pauses). */
+  segments: z.array(TimeRange).min(1).max(10_000),
+  durationUs: z.number().int().nonnegative(),
+  events: z.array(RecorderEvent).max(500_000),
+  /** Utterances detected from microphone levels, for finding retakes. */
+  speech: z.array(TimeRange).max(100_000),
+  transcript: Transcript.nullable(),
+});
+
+export const AiProvider = z.enum(["openai"]);
+
+/** An API key as pasted by the user (trimmed); validated loosely, the provider decides. */
+export const ApiKey = z
+  .string()
+  .trim()
+  .min(20)
+  .max(512)
+  .regex(/^[\x21-\x7e]+$/, "An API key has no spaces or special characters");
+
+export const AiKeyStatus = z.object({
+  provider: AiProvider,
+  hasKey: z.boolean(),
+  /** Last four characters, so the user can tell keys apart. */
+  hint: z.string().max(8).nullable(),
+  /** False when the OS can't encrypt it: the key is kept only until Kadr quits. */
+  persistent: z.boolean(),
+});
+
+export const AiTestResult = z.object({
+  ok: z.boolean(),
+  message: z.string().max(500),
 });
 
 export const CountdownConfig = z.object({
@@ -206,6 +305,8 @@ export const RegionContext = z.object({
 // ---------------------------------------------------------------------------
 
 export type BubbleSizePreset = z.infer<typeof BubbleSizePreset>;
+export type CameraBackgroundMode = z.infer<typeof CameraBackgroundMode>;
+export type CameraBackgroundSettings = z.infer<typeof CameraBackgroundSettings>;
 export type DesktopBubbleSettings = z.infer<typeof DesktopBubbleSettings>;
 export type RecordingMode = z.infer<typeof RecordingMode>;
 export type CaptureArea = z.infer<typeof CaptureArea>;
@@ -221,6 +322,14 @@ export type SessionStatus = z.infer<typeof SessionStatus>;
 export type RecordingResult = z.infer<typeof RecordingResult>;
 export type SessionSnapshot = z.infer<typeof SessionSnapshot>;
 export type SessionCommand = z.infer<typeof SessionCommand>;
+export type NotesLanguage = z.infer<typeof NotesLanguage>;
+export type NotesSettings = z.infer<typeof NotesSettings>;
+export type NotesStatus = z.infer<typeof NotesStatus>;
+export type TranscriptionResult = z.infer<typeof TranscriptionResult>;
+export type NotesSidecar = z.infer<typeof NotesSidecar>;
+export type AiProvider = z.infer<typeof AiProvider>;
+export type AiKeyStatus = z.infer<typeof AiKeyStatus>;
+export type AiTestResult = z.infer<typeof AiTestResult>;
 export type CountdownConfig = z.infer<typeof CountdownConfig>;
 export type CountdownResult = z.infer<typeof CountdownResult>;
 export type RecordingExtension = z.infer<typeof RecordingExtension>;

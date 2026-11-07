@@ -4,11 +4,22 @@ import { isAllowedExternalUrl, isTrustedOrigin } from "../shared/origin";
 const ALLOWED_PERMISSIONS = new Set(["media", "display-capture"]);
 
 /**
+ * Hosts Kadr never talks to, even in dev mode (where pages have no CSP). MediaPipe Tasks 1.x
+ * reports usage metrics here on its own; Kadr pins a release without that code (ADR 0009), and this
+ * keeps a future upgrade from silently sending anything.
+ */
+export const BLOCKED_REQUEST_URLS = ["https://odml.pa.googleapis.com/*"];
+
+/**
  * Applies the security baseline from docs/ARCHITECTURE.md §3.2: permission allowlist, no navigation,
  * no new windows, no <webview>. Display capture is answered in main as well (see capture.ts).
  */
 export function hardenApp(devServerUrl?: string): void {
   const ses = session.defaultSession;
+
+  ses.webRequest.onBeforeRequest({ urls: BLOCKED_REQUEST_URLS }, (_details, callback) => {
+    callback({ cancel: true });
+  });
 
   ses.setPermissionRequestHandler((_contents, permission, callback, details) => {
     callback(

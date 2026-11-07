@@ -5,3 +5,13 @@ This product includes software developed by The Kadr Authors and contributors.
 
 Third-party components and their licenses are listed in the software bill of materials (SBOM)
 published with each release. Reused source code, if any, is attributed below.
+
+---
+
+packages/compositor/assets/selfie_segmenter.tflite
+MediaPipe Selfie Segmentation model, Copyright Google LLC.
+Licensed under the Apache License, Version 2.0.
+https://ai.google.dev/edge/mediapipe/solutions/vision/image_segmenter
+
+The desktop app bundles the MediaPipe Tasks Vision runtime (@mediapipe/tasks-vision 0.10.35),
+Copyright The MediaPipe Authors, licensed under the Apache License, Version 2.0.

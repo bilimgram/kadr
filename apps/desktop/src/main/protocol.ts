@@ -5,7 +5,9 @@ import { APP_HOST, APP_SCHEME } from "../shared/origin";
 
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
-  "script-src 'self'",
+  // 'wasm-unsafe-eval' lets on-device person segmentation compile its WebAssembly (ADR 0009). It
+  // allows WebAssembly only, never JavaScript eval.
+  "script-src 'self' 'wasm-unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "media-src 'self' blob: mediastream:",

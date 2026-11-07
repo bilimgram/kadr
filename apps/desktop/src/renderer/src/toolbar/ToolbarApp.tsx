@@ -8,11 +8,12 @@ import {
   Play,
   RotateCcw,
   Square,
+  StickyNote,
   Trash,
   Video,
   VideoOff,
 } from "lucide-react";
-import { type ReactNode, useId, useRef, useState } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import type { SessionCommand } from "../../../shared/api";
 import { interactiveRegion, useWindowDrag } from "../floating";
 import { useElapsed, useSession, useSettings, useShortcuts } from "../hooks";
@@ -33,6 +34,8 @@ function ToolbarButton({
   disabled,
   pressed,
   tone,
+  badge,
+  className,
 }: {
   label: string;
   icon: ReactNode;
@@ -40,11 +43,13 @@ function ToolbarButton({
   disabled?: boolean;
   pressed?: boolean;
   tone?: "danger";
+  badge?: ReactNode;
+  className?: string;
 }) {
   return (
     <button
       type="button"
-      className={cx("toolbar__button", tone === "danger" && "toolbar__button--danger")}
+      className={cx("toolbar__button", tone === "danger" && "toolbar__button--danger", className)}
       aria-label={label}
       aria-pressed={pressed}
       data-tooltip={label}
@@ -52,8 +57,27 @@ function ToolbarButton({
       onClick={onClick}
     >
       {icon}
+      {badge}
     </button>
   );
+}
+
+/** How long the note button glows after a note lands. */
+const NOTE_FLASH_MS = 1200;
+
+/** True for a moment whenever `count` goes up. */
+function useFlash(count: number): boolean {
+  const [flash, setFlash] = useState(false);
+  const previous = useRef(count);
+  useEffect(() => {
+    const grew = count > previous.current;
+    previous.current = count;
+    if (!grew) return;
+    setFlash(true);
+    const id = setTimeout(() => setFlash(false), NOTE_FLASH_MS);
+    return () => clearTimeout(id);
+  }, [count]);
+  return flash;
 }
 
 /** Floating recording controls on the left edge of the screen (excluded from the recording). */
@@ -66,6 +90,8 @@ export function ToolbarApp() {
   const pausedForConfirmation = useRef(false);
   const titleId = useId();
   const shortcuts = useShortcuts();
+  const notes = session.notes;
+  const noteFlash = useFlash(notes.count);
 
   const platform = window.kadr.platform;
   const saving = session.status === "saving";
@@ -166,6 +192,39 @@ export function ToolbarApp() {
           disabled={saving || session.mode !== "screenAndCamera"}
           onClick={() => send("toggleCamera")}
         />
+
+        <div className="toolbar__divider" />
+
+        <ToolbarButton
+          label={withShortcut(
+            notes.listening === "error" && notes.message
+              ? `Add note (spoken notes paused: ${notes.message})`
+              : "Add note",
+            shortcuts.addNote,
+          )}
+          icon={<StickyNote {...icon} />}
+          disabled={saving || paused}
+          className={cx(noteFlash && "toolbar__button--flash")}
+          onClick={() => send("addNote")}
+          badge={
+            notes.count > 0 || notes.listening === "error" ? (
+              <span
+                className={cx(
+                  "toolbar__badge",
+                  notes.listening === "error" && "toolbar__badge--warning",
+                )}
+                aria-hidden="true"
+              >
+                {notes.listening === "error" ? "!" : notes.count}
+              </span>
+            ) : undefined
+          }
+        />
+        <span className="k-sr-only" aria-live="polite">
+          {notes.count > 0
+            ? `${notes.count} ${notes.count === 1 ? "note" : "notes"}${notes.lastText ? `: ${notes.lastText}` : ""}`
+            : ""}
+        </span>
       </div>
 
       {confirmation && (

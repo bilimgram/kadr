@@ -223,7 +223,7 @@ body.control-page {
 
 .panel__nav {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   margin: 2px -18px 0;
   padding: 8px 8px 12px;
   border-top: 1px solid var(--k-border);
@@ -540,6 +540,37 @@ body.overlay-page {
   cursor: not-allowed;
 }
 
+.toolbar__button {
+  position: relative;
+}
+
+/* A note just landed. */
+.toolbar__button--flash {
+  background: var(--k-accent-soft);
+  color: #ffffff;
+}
+
+.toolbar__badge {
+  position: absolute;
+  top: 3px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--k-radius-full);
+  background: var(--k-accent);
+  color: var(--k-accent-contrast);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.toolbar__badge--warning {
+  background: var(--k-danger);
+}
+
 .toolbar-confirm {
   display: flex;
   flex-direction: column;
@@ -608,6 +639,11 @@ body.overlay-page {
   border-radius: calc(var(--bubble-radius) * min(100vw, 100vh));
 }
 
+/* Background removed: the window is transparent around the person. */
+.bubble--cut-out {
+  background: transparent;
+}
+
 .bubble__video {
   display: block;
   width: 100%;
@@ -618,6 +654,11 @@ body.overlay-page {
 
 .bubble__video--mirror {
   transform: scaleX(-1);
+}
+
+/* Still playing (it feeds the canvas), but hidden so it can't show through a cut-out. */
+.bubble__video--behind {
+  visibility: hidden;
 }
 
 /* The light-corrected frame is drawn over the (still playing) video. */

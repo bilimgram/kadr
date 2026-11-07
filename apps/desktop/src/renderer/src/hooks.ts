@@ -101,9 +101,11 @@ export function useShortcuts(): ActiveShortcuts {
   const [shortcuts, setShortcuts] = useState<ActiveShortcuts>({
     startStop: null,
     pauseResume: null,
+    addNote: null,
   });
   useEffect(() => {
     void window.kadr.shortcuts.get().then(setShortcuts);
+    return window.kadr.shortcuts.onChange(setShortcuts);
   }, []);
   return shortcuts;
 }

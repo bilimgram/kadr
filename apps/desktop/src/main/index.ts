@@ -1,6 +1,8 @@
 import { join } from "node:path";
 import { app, globalShortcut, systemPreferences } from "electron";
 import { Channels } from "../shared/api";
+import { KeyStore } from "./ai/keys";
+import { BackgroundImageStore } from "./background-image";
 import { handleDisplayCapture } from "./capture";
 import { recoverRenderer } from "./crash-recovery";
 import { registerIpc } from "./ipc";
@@ -10,7 +12,7 @@ import { RecordingStore } from "./recordings";
 import { hardenApp } from "./security";
 import { SessionCoordinator } from "./session";
 import { SettingsStore } from "./settings-store";
-import { registerShortcuts } from "./shortcuts";
+import { ShortcutRegistry } from "./shortcuts";
 import { createTray } from "./tray";
 import { UpdateService } from "./updater";
 import { WindowStateStore } from "./window-state";
@@ -75,15 +77,30 @@ app.whenReady().then(async () => {
   windowState = new WindowStateStore();
   await windowState.load();
   windows = new WindowManager(windowState);
-  const session = new SessionCoordinator(windows, settings);
+  const manager = windows;
+  const keys = new KeyStore();
+  await keys.load();
+
+  // Assigned right below; the session only calls back once a recording starts.
+  let shortcuts: ShortcutRegistry | null = null;
+  const session = new SessionCoordinator(windows, settings, (active) => {
+    // The note shortcut belongs to other apps except while recording.
+    if (active) shortcuts?.register("addNote");
+    else shortcuts?.unregister("addNote");
+  });
   handleDisplayCapture(devServerUrl, () => session.captureDisplayId());
 
-  const shortcuts = registerShortcuts({
-    startStop: () => session.toggleStartStop(),
-    pauseResume: () => session.command("togglePause"),
-  });
+  shortcuts = new ShortcutRegistry(
+    {
+      startStop: () => session.toggleStartStop(),
+      pauseResume: () => session.command("togglePause"),
+      addNote: () => session.command("addNote"),
+    },
+    (active) => manager.broadcast(Channels.shortcutsChanged, active),
+  );
+  shortcuts.register("startStop");
+  shortcuts.register("pauseResume");
 
-  const manager = windows;
   updates = new UpdateService({
     getSettings: () => settings.get().updates,
     isBusy: () => session.isActive(),
@@ -98,6 +115,8 @@ app.whenReady().then(async () => {
     windows,
     shortcuts,
     updates,
+    backgroundImage: new BackgroundImageStore(),
+    keys,
   });
 
   const updater = updates;

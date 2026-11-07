@@ -1,7 +1,14 @@
 import { AppSettings, AppSettingsPatch } from "./schemas";
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  bubble: { visible: true, shape: "circle", size: "medium", mirror: true, touchUp: true },
+  bubble: {
+    visible: true,
+    shape: "circle",
+    size: "medium",
+    mirror: true,
+    touchUp: true,
+    background: { mode: "none", blur: 0.6, presetId: "graphite", imageRevision: null },
+  },
   recording: {
     mode: "screenAndCamera",
     countdownSeconds: 3,
@@ -14,6 +21,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   appearance: { theme: "light" },
   updates: { channel: "stable", automatic: true },
   system: { openAtLogin: false },
+  notes: { listen: false, language: "auto" },
 };
 
 /** Applies a partial update; the result is validated so invalid combinations never persist. */
@@ -24,6 +32,7 @@ export function mergeSettings(base: AppSettings, patch: AppSettingsPatch): AppSe
     appearance: { ...base.appearance, ...patch.appearance },
     updates: { ...base.updates, ...patch.updates },
     system: { ...base.system, ...patch.system },
+    notes: { ...base.notes, ...patch.notes },
   });
 }
 
@@ -38,6 +47,7 @@ export function parseStoredSettings(json: unknown): AppSettings {
   const appearance = AppSettingsPatch.shape.appearance.safeParse(record.appearance);
   const updates = AppSettingsPatch.shape.updates.safeParse(record.updates);
   const system = AppSettingsPatch.shape.system.safeParse(record.system);
+  const notes = AppSettingsPatch.shape.notes.safeParse(record.notes);
   try {
     return mergeSettings(DEFAULT_SETTINGS, {
       bubble: bubble.success ? bubble.data : undefined,
@@ -45,6 +55,7 @@ export function parseStoredSettings(json: unknown): AppSettings {
       appearance: appearance.success ? appearance.data : undefined,
       updates: updates.success ? updates.data : undefined,
       system: system.success ? system.data : undefined,
+      notes: notes.success ? notes.data : undefined,
     });
   } catch {
     return DEFAULT_SETTINGS;

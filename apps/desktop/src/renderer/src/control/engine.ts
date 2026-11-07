@@ -13,8 +13,10 @@ import type {
   SessionSnapshot,
 } from "../../../shared/api";
 import { elapsedMs, IDLE_SNAPSHOT } from "../../../shared/session";
+import { type ProcessedCamera, processCameraTrack } from "./camera-track";
 import { canCropVideo, cropVideoTrack } from "./crop";
 import { describeMediaError } from "./media-errors";
+import { NotesRecorder } from "./notes-recorder";
 
 interface Capture {
   streams: MediaStream[];
@@ -22,12 +24,16 @@ interface Capture {
   audio: MixedAudio | null;
   microphone: MediaStreamTrack | null;
   mimeType: string;
+  /** Camera-only mode: the effects pipeline feeding the recorded track. */
+  cameraEffects: ProcessedCamera | null;
 }
 
 interface Take {
   id: string;
   recorder: TrackRecorder;
   stats: { bytes: number };
+  /** Notes, the event log and the clock of this take; created when recording starts. */
+  notes: NotesRecorder | null;
 }
 
 const VIDEO_BITRATE = 8_000_000;
@@ -100,6 +106,9 @@ export class RecordingEngine {
         break;
       case "toggleCamera":
         break; // handled by main (bubble visibility)
+      case "addNote":
+        if (status === "recording") this.take?.notes?.addNote();
+        break;
     }
   }
 
@@ -128,6 +137,7 @@ export class RecordingEngine {
 
   private async acquire(settings: AppSettings, region: RegionSelection | null): Promise<Capture> {
     const streams: MediaStream[] = [];
+    let cameraEffects: ProcessedCamera | null = null;
     try {
       let video: MediaStreamTrack | undefined;
       if (settings.recording.mode === "camera") {
@@ -142,6 +152,9 @@ export class RecordingEngine {
         });
         streams.push(camera);
         video = camera.getVideoTracks()[0];
+        // Background and light correction; the bubble preview shows the same.
+        cameraEffects = video ? processCameraTrack(video, settings) : null;
+        if (cameraEffects) video = cameraEffects.track;
       } else {
         const screen = await navigator.mediaDevices.getDisplayMedia({
           video: { frameRate: { ideal: 30 } },
@@ -182,8 +195,9 @@ export class RecordingEngine {
       const audioSources = streams.filter((stream) => stream.getAudioTracks().length > 0);
       const audio = audioSources.length > 0 ? mixAudioStreams(audioSources) : null;
       const output = new MediaStream([video, ...(audio?.stream.getAudioTracks() ?? [])]);
-      return { streams, output, audio, microphone, mimeType: pickMimeType() };
+      return { streams, output, audio, microphone, mimeType: pickMimeType(), cameraEffects };
     } catch (error) {
+      cameraEffects?.dispose();
       stopStreams(...streams);
       throw error;
     }
@@ -203,7 +217,7 @@ export class RecordingEngine {
         await window.kadr.recording.appendChunk(id, new Uint8Array(await chunk.arrayBuffer()));
       },
     });
-    this.take = { id, recorder, stats };
+    this.take = { id, recorder, stats, notes: null };
   }
 
   private async countdownThenRecord(settings: AppSettings): Promise<void> {
@@ -221,12 +235,18 @@ export class RecordingEngine {
         return;
       }
     }
-    this.requireTake().recorder.start();
+    const take = this.requireTake();
+    take.recorder.start();
+    // Starts its clock synchronously, together with the recorder.
+    take.notes = new NotesRecorder(settings.notes, (notes) => this.update({ notes }));
+    void take.notes.start(this.capture?.microphone ?? null, settings.recording.mode !== "camera");
     this.update({ status: "recording", accumulatedMs: 0, segmentStartedAt: Date.now() });
   }
 
   private pause(): void {
-    this.requireTake().recorder.pause();
+    const take = this.requireTake();
+    take.recorder.pause();
+    take.notes?.pause();
     this.update({
       status: "paused",
       accumulatedMs: elapsedMs(this.snapshot),
@@ -235,7 +255,9 @@ export class RecordingEngine {
   }
 
   private resume(): void {
-    this.requireTake().recorder.resume();
+    const take = this.requireTake();
+    take.recorder.resume();
+    take.notes?.resume();
     this.update({ status: "recording", segmentStartedAt: Date.now() });
   }
 
@@ -244,6 +266,13 @@ export class RecordingEngine {
     const durationMs = elapsedMs(this.snapshot);
     this.update({ status: "saving", accumulatedMs: durationMs, segmentStartedAt: null });
     await take.recorder.stop();
+    // Notes never cost the recording: if they can't be saved, the video still is.
+    const sidecar = await take.notes?.finish().catch(() => null);
+    if (sidecar) {
+      await window.kadr.recording
+        .saveNotes(take.id, sidecar)
+        .catch((error: unknown) => console.warn("Couldn't save the recording's notes:", error));
+    }
     const path = await window.kadr.recording.finish(take.id);
     this.take = null;
     this.releaseCapture();
@@ -289,12 +318,14 @@ export class RecordingEngine {
     const take = this.take;
     this.take = null;
     if (!take) return;
+    take.notes?.dispose();
     await take.recorder.stop().catch(() => undefined);
     await window.kadr.recording.discard(take.id);
   }
 
   private releaseCapture(): void {
     if (!this.capture) return;
+    this.capture.cameraEffects?.dispose();
     stopStreams(...this.capture.streams);
     this.capture.audio?.dispose();
     this.capture = null;

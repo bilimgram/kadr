@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { createWriteStream, type WriteStream } from "node:fs";
-import { mkdir, rm } from "node:fs/promises";
-import { isAbsolute, join, relative } from "node:path";
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import { basename, dirname, isAbsolute, join, relative } from "node:path";
 import { app } from "electron";
-import type { RecordingExtension } from "../shared/api";
+import type { NotesSidecar, RecordingExtension } from "../shared/api";
+import { buildNotesFiles, hasNotesContent } from "../shared/notes-files";
 
 interface OpenRecording {
   path: string;
@@ -44,6 +45,33 @@ export class RecordingStore {
       recording.stream.once("error", reject);
       recording.stream.end(() => resolve(recording.path));
     });
+  }
+
+  /**
+   * Saves the notes of a take that is still open (before `finish`) next to its file: a `.kadr`
+   * bundle and a readable `… notes.md` (ADR 0010). Does nothing when there is nothing to save.
+   */
+  async saveNotes(id: string, sidecar: NotesSidecar): Promise<void> {
+    if (!hasNotesContent(sidecar)) return;
+    const { path } = this.get(id);
+    const files = buildNotesFiles(sidecar, {
+      videoFile: basename(path),
+      id,
+      createdAt: new Date(),
+      appVersion: app.getVersion(),
+      platform:
+        process.platform === "darwin" || process.platform === "linux" ? process.platform : "win32",
+    });
+    const bundleDir = join(dirname(path), files.bundleName);
+    for (const [relativePath, content] of Object.entries(files.bundle)) {
+      const target = join(bundleDir, relativePath);
+      if (!this.contains(target)) throw new Error("Notes path is outside the recordings folder");
+      await mkdir(dirname(target), { recursive: true });
+      await writeFile(target, content, "utf8");
+    }
+    if (files.markdown) {
+      await writeFile(join(dirname(path), files.markdown.name), files.markdown.content, "utf8");
+    }
   }
 
   /** Closes and deletes a take (restart / discard). Unknown ids are ignored. */

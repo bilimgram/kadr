@@ -1,9 +1,16 @@
 import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { _electron, type ElectronApplication, expect, type Page, test } from "@playwright/test";
+import type { KadrApi } from "../src/shared/api";
+
+declare global {
+  interface Window {
+    readonly kadr: KadrApi;
+  }
+}
 
 // Playwright loads this package's tests as CommonJS, so `import.meta` isn't available.
 const appRoot = join(__dirname, "..");
@@ -72,7 +79,7 @@ async function showForeignWindow(rect: { x: number; y: number; width: number; he
 }
 
 /** Starts Kadr on the test's profile (relaunching keeps its settings). */
-async function launchApp(): Promise<ElectronApplication> {
+async function launchApp(extraArgs: readonly string[] = []): Promise<ElectronApplication> {
   const env = Object.fromEntries(
     Object.entries(process.env).filter(
       (entry): entry is [string, string] =>
@@ -81,7 +88,7 @@ async function launchApp(): Promise<ElectronApplication> {
   );
   return _electron.launch({
     // The app folder (package.json → out/main), like the installed app: real name and version.
-    args: [appRoot, `--user-data-dir=${userDataDir}`],
+    args: [appRoot, `--user-data-dir=${userDataDir}`, ...extraArgs],
     cwd: appRoot,
     env,
   });
@@ -537,5 +544,100 @@ windowsOnly("recording a region captures exactly that area and copies the file",
   } finally {
     await app.evaluate(({ clipboard }, text) => clipboard.writeText(text), clipboardText);
     rmSync(videos, { recursive: true, force: true });
+  }
+});
+
+/** Relaunches with Chromium's fake camera (a moving test pattern, no person) and microphone. */
+async function relaunchWithFakeDevices(): Promise<Page> {
+  await app.close();
+  app = await launchApp(["--use-fake-device-for-media-stream"]);
+  const panel = await windowFor("control");
+  await expect(panel.getByRole("button", { name: "Start recording" })).toBeVisible();
+  return panel;
+}
+
+test("camera backgrounds run on-device segmentation under the app's CSP", async () => {
+  const panel = await relaunchWithFakeDevices();
+  const bubble = await windowFor("bubble");
+  const webgl = await bubble.evaluate(() =>
+    Boolean(document.createElement("canvas").getContext("webgl2")),
+  );
+  test.skip(!webgl, "No WebGL2 on this machine");
+  await panel.evaluate(async () => {
+    const { bubble } = await window.kadr.settings.get();
+    await window.kadr.settings.update({
+      bubble: {
+        touchUp: false,
+        background: { ...bubble.background, mode: "color", presetId: "ocean" },
+      },
+    });
+  });
+  // The fake camera shows no person, so once the model runs the whole bubble is the "ocean"
+  // gradient (#3b82c4 to #163a63): about (40, 94, 147) halfway down.
+  const centre = () =>
+    app.evaluate(async ({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows().find((w) =>
+        w.webContents.getURL().endsWith("/bubble.html"),
+      );
+      if (!win) return null;
+      const image = await win.webContents.capturePage();
+      const { width, height } = image.getSize();
+      const [blue = 0, green = 0, red = 0] = image
+        .crop({ x: Math.floor(width / 2), y: Math.floor(height / 2), width: 1, height: 1 })
+        .toBitmap();
+      return [red, green, blue];
+    });
+  await expect
+    .poll(
+      async () => {
+        const rgb = await centre();
+        return rgb !== null && [40, 94, 147].every((v, i) => Math.abs((rgb[i] ?? 0) - v) < 18);
+      },
+      { timeout: 30_000 },
+    )
+    .toBe(true);
+});
+
+test("notes made while recording are saved next to the video", async () => {
+  const panel = await relaunchWithFakeDevices();
+  await panel.evaluate(async () => {
+    const { bubble } = await window.kadr.settings.get();
+    await window.kadr.settings.update({
+      recording: { mode: "camera", countdownSeconds: 0, copyToClipboard: false },
+      // The raw camera: this test is about notes, not the GPU.
+      bubble: { touchUp: false, background: { ...bubble.background, mode: "none" } },
+    });
+  });
+  const session = () => panel.evaluate(() => window.kadr.session.get());
+  const noteShortcut = () =>
+    panel.evaluate(() => window.kadr.shortcuts.get().then((s) => s.addNote));
+  // The note shortcut belongs to other apps except while recording.
+  expect(await noteShortcut()).toBeNull();
+
+  await panel.evaluate(() => window.kadr.session.command("start"));
+  await expect.poll(async () => (await session()).status, { timeout: 15_000 }).toBe("recording");
+  await expect.poll(noteShortcut).not.toBeNull();
+  await panel.evaluate(() => window.kadr.session.command("addNote"));
+  await expect.poll(async () => (await session()).notes.count).toBe(1);
+  const toolbar = await windowFor("toolbar");
+  await expect(toolbar.getByRole("button", { name: /^Add note/ })).toBeVisible();
+
+  await panel.evaluate(() => window.kadr.session.command("stop"));
+  await expect
+    .poll(async () => (await session()).lastResult?.path ?? null, { timeout: 20_000 })
+    .not.toBeNull();
+  const path = (await session()).lastResult?.path ?? "";
+  const base = join(dirname(path), basename(path).replace(/\.[^.]+$/, ""));
+  try {
+    expect(existsSync(`${base} notes.md`)).toBe(true);
+    const bundle = `${base}.kadr`;
+    expect(readFileSync(join(bundle, "events.jsonl"), "utf8")).toContain('"type":"note"');
+    const manifest = JSON.parse(readFileSync(join(bundle, "manifest.json"), "utf8"));
+    expect(manifest.media.file).toBe(basename(path));
+    expect(await noteShortcut()).toBeNull();
+  } finally {
+    for (const file of [path, `${base} notes.md`, `${base}.kadr`]) {
+      rmSync(file, { recursive: true, force: true });
+    }
   }
 });

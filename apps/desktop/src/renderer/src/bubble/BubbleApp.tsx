@@ -1,9 +1,8 @@
 import {
-  CameraEnhancer,
+  type CameraEffects,
+  CameraPipeline,
   LightMeter,
-  NEUTRAL_TONE,
-  smoothTone,
-  TARGET_FACE_LUMA,
+  needsSegmentation,
   toneCssFilter,
   toneForLuma,
 } from "@kadr/compositor";
@@ -11,71 +10,78 @@ import { getBubbleShape } from "@kadr/compositor/shapes";
 import { ActivityIndicator, cx } from "@kadr/ui";
 import { VideoOff } from "lucide-react";
 import { type CSSProperties, type RefObject, useEffect, useRef, useState } from "react";
+import { bubbleCameraEffects } from "../../../shared/camera";
+import { loadPersonSegmenter, useBackgroundImage } from "../camera/effects";
 import { interactiveRegion, useWindowDrag } from "../floating";
 import { useBubbleVisible, useSettings } from "../hooks";
 
 const CLIP_ID = "kadr-bubble-clip";
-/** Re-meter the face this often; tone changes ease in between. */
-const METER_INTERVAL_MS = 250;
+/** Re-meter the face this often for the CSS fallback. */
+const FALLBACK_METER_INTERVAL_MS = 250;
 
 /**
- * Light correction for the live bubble (see packages/compositor/src/light.ts): renders each camera
- * frame through the GPU enhancer into a canvas on top of the video. The bubble is captured with the
- * screen, so recordings get the same correction. Falls back to a CSS filter without WebGL2.
+ * Camera effects for the live bubble (light correction and backgrounds, see
+ * packages/compositor/src/camera-pipeline.ts): renders each camera frame through the GPU pipeline
+ * into a canvas on top of the video. The bubble is captured with the screen, so recordings look the
+ * same. Without WebGL2, light correction falls back to a CSS filter and backgrounds are off.
  */
-function useLightCorrection(
+function useCameraEffects(
   videoRef: RefObject<HTMLVideoElement | null>,
   canvasRef: RefObject<HTMLCanvasElement | null>,
-  enabled: boolean,
-  mirror: boolean,
+  effects: CameraEffects | null,
+  backgroundImage: ImageBitmap | null,
 ) {
-  const [enhanced, setEnhanced] = useState(false);
+  const [processed, setProcessed] = useState(false);
   const [fallbackFilter, setFallbackFilter] = useState("none");
-  const mirrorRef = useRef(mirror);
-  mirrorRef.current = mirror;
+  const effectsRef = useRef(effects);
+  effectsRef.current = effects;
+  const imageRef = useRef(backgroundImage);
+  imageRef.current = backgroundImage;
+  const pipelineRef = useRef<CameraPipeline | null>(null);
+  const active = effects !== null && needsSegmentation(effects);
 
   useEffect(() => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    if (!enabled || !video) {
-      setEnhanced(false);
+    if (!active || !video) {
+      setProcessed(false);
       setFallbackFilter("none");
       return;
     }
 
-    const enhancer = canvas ? CameraEnhancer.create(canvas) : null;
-    const meter = new LightMeter();
-    let tone = NEUTRAL_TONE;
-    let target = NEUTRAL_TONE;
-    let luma = TARGET_FACE_LUMA;
-    let lastMeteredAt = -Infinity;
+    const pipeline = canvas ? CameraPipeline.create(canvas) : null;
+    pipelineRef.current = pipeline;
+    pipeline?.setBackgroundImage(imageRef.current);
+    setProcessed(Boolean(pipeline));
     let stopped = false;
     let handle = 0;
-    setEnhanced(Boolean(enhancer));
+    if (pipeline) {
+      void loadPersonSegmenter().then((segmenter) => {
+        if (!stopped) pipeline.setSegmenter(segmenter);
+      });
+    }
+    const meter = pipeline ? null : new LightMeter();
+    let lastMeteredAt = Number.NEGATIVE_INFINITY;
 
     const draw = (now: number) => {
       if (stopped) return;
-      if (now - lastMeteredAt >= METER_INTERVAL_MS) {
-        lastMeteredAt = now;
-        const metered = meter.measure(video);
-        if (metered !== null) {
-          luma = metered;
-          target = toneForLuma(metered);
-          if (!enhancer) setFallbackFilter(toneCssFilter(target, luma));
-        }
-      }
-      tone = smoothTone(tone, target, 0.12);
-      if (enhancer?.ready && canvas && video.videoWidth > 0) {
+      const current = effectsRef.current;
+      if (pipeline?.ready && canvas && current && video.videoWidth > 0) {
         const scale = window.devicePixelRatio || 1;
         const width = Math.max(1, Math.round(canvas.clientWidth * scale));
         const height = Math.max(1, Math.round(canvas.clientHeight * scale));
         if (canvas.width !== width) canvas.width = width;
         if (canvas.height !== height) canvas.height = height;
-        enhancer.render(
+        pipeline.render(
           video,
           { width: video.videoWidth, height: video.videoHeight },
-          { ...tone, mirror: mirrorRef.current },
+          current,
+          now,
         );
+      } else if (meter && current?.touchUp && now - lastMeteredAt >= FALLBACK_METER_INTERVAL_MS) {
+        lastMeteredAt = now;
+        const reading = meter.measure(video);
+        if (reading) setFallbackFilter(toneCssFilter(toneForLuma(reading.luma), reading.luma));
       }
       schedule();
     };
@@ -93,11 +99,16 @@ function useLightCorrection(
       stopped = true;
       if ("cancelVideoFrameCallback" in video) video.cancelVideoFrameCallback(handle);
       else cancelAnimationFrame(handle);
-      enhancer?.dispose();
+      pipeline?.dispose();
+      pipelineRef.current = null;
     };
-  }, [videoRef, canvasRef, enabled]);
+  }, [videoRef, canvasRef, active]);
 
-  return { enhanced, fallbackFilter };
+  useEffect(() => {
+    pipelineRef.current?.setBackgroundImage(backgroundImage);
+  }, [backgroundImage]);
+
+  return { active, processed, fallbackFilter };
 }
 
 /**
@@ -112,9 +123,21 @@ export function BubbleApp() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drag = useWindowDrag();
-  const touchUp = settings?.bubble.touchUp ?? false;
   const mirror = settings?.bubble.mirror ?? true;
-  const { enhanced, fallbackFilter } = useLightCorrection(videoRef, canvasRef, touchUp, mirror);
+  const effects = settings ? bubbleCameraEffects(settings.bubble) : null;
+  const backgroundImage = useBackgroundImage(
+    effects?.background.mode === "image"
+      ? (settings?.bubble.background.imageRevision ?? null)
+      : null,
+  );
+  const { active, processed, fallbackFilter } = useCameraEffects(
+    videoRef,
+    canvasRef,
+    effects,
+    backgroundImage,
+  );
+  // Background removed: only the person is drawn, the desktop shows around them.
+  const cutOut = processed && effects?.background.mode === "remove";
 
   // Hold the camera only while the bubble is on screen: a hidden window would otherwise keep the
   // camera (and its privacy light) on after the panel closes.
@@ -171,7 +194,11 @@ export function BubbleApp() {
         </defs>
       </svg>
       <div
-        className={cx("bubble", shape.kind === "roundRect" && "bubble--round-rect")}
+        className={cx(
+          "bubble",
+          shape.kind === "roundRect" && "bubble--round-rect",
+          cutOut && "bubble--cut-out",
+        )}
         style={shapeStyle}
         title="Drag to move"
         {...interactiveRegion}
@@ -189,23 +216,24 @@ export function BubbleApp() {
               className={cx(
                 "bubble__video bubble__media",
                 cameraReady && "bubble__media--ready",
-                !enhanced && mirror && "bubble__video--mirror",
+                !processed && mirror && "bubble__video--mirror",
+                cutOut && "bubble__video--behind",
               )}
-              style={enhanced ? undefined : { filter: fallbackFilter }}
+              style={processed ? undefined : { filter: fallbackFilter }}
               onPlaying={() => setCameraReady(true)}
               onEmptied={() => setCameraReady(false)}
               autoPlay
               muted
               playsInline
             />
-            {touchUp && (
+            {active && (
               <canvas
                 ref={canvasRef}
                 className={cx(
                   "bubble__canvas bubble__media",
                   cameraReady && "bubble__media--ready",
                 )}
-                hidden={!enhanced}
+                hidden={!processed}
               />
             )}
             {!cameraReady && (

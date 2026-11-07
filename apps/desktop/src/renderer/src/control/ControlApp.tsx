@@ -31,6 +31,7 @@ import {
   RotateCw,
   Smile,
   SquareDashed,
+  StickyNote,
   Timer,
   Video,
   Volume2,
@@ -49,10 +50,12 @@ import type {
 } from "../../../shared/api";
 import { updateStatusText } from "../../../shared/updates";
 import { useSettingsWithStatus, useShortcuts, useUpdates } from "../hooks";
+import { BackgroundSettings } from "./BackgroundSettings";
 import { engine } from "./engine";
+import { NotesSettings } from "./NotesSettings";
 import { useFitWindowToContent, useMicLevelMeter, usePanelVisible } from "./panel-hooks";
 
-type View = "main" | "bubble" | "countdown" | "audio" | "more";
+type View = "main" | "bubble" | "countdown" | "audio" | "notes" | "more";
 
 const icon = { className: "k-icon", "aria-hidden": true } as const;
 
@@ -554,6 +557,11 @@ function MainView({
           onClick={() => onNavigate("countdown")}
         />
         <NavButton label="Audio" icon={<Volume2 {...icon} />} onClick={() => onNavigate("audio")} />
+        <NavButton
+          label="Notes"
+          icon={<StickyNote {...icon} />}
+          onClick={() => onNavigate("notes")}
+        />
         <NavButton label="More" icon={<Ellipsis {...icon} />} onClick={() => onNavigate("more")} />
       </nav>
     </div>
@@ -591,9 +599,10 @@ function SettingsView({
             options={SIZE_OPTIONS}
             onChange={(size) => update({ bubble: { size } })}
           />
+          <BackgroundSettings background={bubble.background} update={update} />
           <Switch
             label="Light correction"
-            description="Brightens your camera in dim rooms"
+            description="Lights your face and fixes colour casts in dim or warm rooms"
             checked={bubble.touchUp}
             onChange={(touchUp) => update({ bubble: { touchUp } })}
           />
@@ -646,6 +655,17 @@ function SettingsView({
           </p>
         </SubView>
       );
+    case "notes":
+      return (
+        <SubView title="Notes while recording" onBack={onBack}>
+          <NotesSettings
+            notes={settings.notes}
+            update={update}
+            shortcut={shortcuts.addNote}
+            platform={platform}
+          />
+        </SubView>
+      );
     case "more":
       return (
         <SubView title="More" onBack={onBack}>
@@ -695,6 +715,14 @@ function SettingsView({
                 <Kbd shortcut={shortcuts.pauseResume} platform={platform} />
               ) : (
                 "Unavailable"
+              )}
+            </dd>
+            <dt>Add a note</dt>
+            <dd>
+              {shortcuts.addNote ? (
+                <Kbd shortcut={shortcuts.addNote} platform={platform} />
+              ) : (
+                "While recording"
               )}
             </dd>
           </dl>

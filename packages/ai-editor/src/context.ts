@@ -54,6 +54,15 @@ export function buildEditContext({
         return [`${t} focus ${event.app}${event.title ? ` — ${event.title}` : ""}`];
       case "marker":
         return [`${t} marker ${event.kind}${event.label ? `: ${event.label}` : ""}`];
+      case "note": {
+        const spoken = event.speech
+          ? ` (spoken ${formatSeconds(event.speech.startUs)}-${formatSeconds(event.speech.endUs)})`
+          : "";
+        const where = event.position
+          ? ` at (${event.position.x.toFixed(2)}, ${event.position.y.toFixed(2)})`
+          : "";
+        return [`${t} note${spoken}${where}: ${event.text ?? "(no text)"}`];
+      }
       case "recording.pause":
         return [`${t} paused`];
       case "recording.resume":

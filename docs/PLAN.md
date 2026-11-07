@@ -106,6 +106,9 @@ Estimates assume 1–2 engineers working with Claude Code. Each phase has measur
 > correction, 3-2-1 countdown with sound, floating recording toolbar (stop, pause, restart, discard,
 > mic mute, camera toggle), global shortcuts with fallbacks, persisted settings, Loom-sized bubble.
 > Region recording with a multi-display area picker and copy-to-clipboard landed 2026-10-28.
+> Camera backgrounds (blur, remove, colour, image) with on-device segmentation, person-aware light
+> correction, and notes while recording (shortcut and spoken, en/uz/ru) landed 2026-11-07
+> (ADR 0009, ADR 0010).
 > Next — WebCodecs pipeline with separate tracks, Mode B, window source, event log, benchmarks.
 - Control bar (screen / window / region / camera-only modes), device pickers, 3-2-1 countdown,
   pause/resume/restart/discard, global hotkeys, tray.

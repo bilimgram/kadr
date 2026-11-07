@@ -76,6 +76,12 @@ export const Manifest = z.object({
   /** Recorded spans; gaps between segments are pauses. */
   segments: z.array(TimeRange).min(1),
   composite: z.object({ file: z.string().min(1) }).optional(),
+  /**
+   * A single-file recording kept next to the bundle instead of inside it (desktop recordings before
+   * separate tracks): the file name of a sibling of the bundle folder. Its timeline is `segments`
+   * played back to back.
+   */
+  media: z.object({ file: z.string().min(1).max(255) }).optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -142,6 +148,22 @@ export const RecorderEvent = z.discriminatedUnion("type", [
   }),
   z.object({ ...at, type: z.literal("recording.pause") }),
   z.object({ ...at, type: z.literal("recording.resume") }),
+  /**
+   * A note for whoever edits the recording, made while recording: the note shortcut or button, or a
+   * spoken trigger phrase ("add a note …"). `t` is when the note starts.
+   */
+  z.object({
+    ...at,
+    type: z.literal("note"),
+    id: z.string().min(1).max(64),
+    source: z.enum(["shortcut", "voice"]),
+    /** What was said, when it was transcribed. */
+    text: z.string().max(4000).optional(),
+    /** When the note was spoken, so an editor can cut it out of the video. */
+    speech: TimeRange.optional(),
+    /** Where the pointer was on the captured surface ("put it here", "this part"). */
+    position: NormalizedPoint.optional(),
+  }),
 ]);
 
 // ---------------------------------------------------------------------------
@@ -162,6 +184,11 @@ export const Transcript = z.object({
   language: z.string().min(2),
   provider: z.string(),
   model: z.string().optional(),
+  /**
+   * How precise word times are: "word" when the provider timed each word, "segment" when only
+   * phrases were timed and words are spread across them. Absent means "word".
+   */
+  timing: z.enum(["word", "segment"]).optional(),
   words: z.array(TranscriptWord),
 });
 

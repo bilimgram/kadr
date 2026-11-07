@@ -1,3 +1,5 @@
+import type { NormalizedPoint } from "@kadr/project-format";
+import { screen } from "electron";
 import {
   Channels,
   type CountdownConfig,
@@ -8,6 +10,7 @@ import {
   type SessionSnapshot,
   type SessionStatus,
 } from "../shared/api";
+import { normalizeToArea } from "../shared/cursor";
 import { ACTIVE_STATUSES, IDLE_SNAPSHOT } from "../shared/session";
 import type { SettingsStore } from "./settings-store";
 import type { WindowManager } from "./windows";
@@ -35,6 +38,8 @@ export class SessionCoordinator {
   constructor(
     private readonly windows: WindowManager,
     private readonly settings: SettingsStore,
+    /** Called when a session starts (true) or ends (false), e.g. to hold the note shortcut. */
+    private readonly onActiveChange: (active: boolean) => void = () => undefined,
   ) {}
 
   getSnapshot(): SessionSnapshot {
@@ -50,7 +55,27 @@ export class SessionCoordinator {
     const previous = this.snapshot.status;
     this.snapshot = next;
     this.windows.broadcast(Channels.sessionChanged, next);
-    if (previous !== next.status) this.choreograph(next.status);
+    if (previous !== next.status) {
+      if ((previous === "idle") !== (next.status === "idle"))
+        this.onActiveChange(next.status !== "idle");
+      this.choreograph(next.status);
+    }
+  }
+
+  /**
+   * The pointer's position on what is being recorded (the region, or the captured display), or
+   * null outside it or in camera-only recordings.
+   */
+  cursorPosition(): NormalizedPoint | null {
+    if (this.snapshot.mode === "camera") return null;
+    const displayId = this.captureDisplayId();
+    const area =
+      this.region?.area ??
+      (
+        screen.getAllDisplays().find((display) => display.id === displayId) ??
+        screen.getPrimaryDisplay()
+      ).bounds;
+    return normalizeToArea(screen.getCursorScreenPoint(), area);
   }
 
   command(command: SessionCommand): void {

@@ -1,12 +1,23 @@
+import type { NormalizedPoint } from "@kadr/project-format";
+import type { BackgroundImageType } from "./images";
 import type {
+  AiKeyStatus,
+  AiProvider,
+  AiTestResult,
   AppSettings,
   AppSettingsPatch,
   BubbleSizePreset,
+  CameraBackgroundMode,
+  CameraBackgroundSettings,
   CaptureArea,
   CountdownConfig,
   CountdownResult,
   CountdownSeconds,
   DesktopBubbleSettings,
+  NotesLanguage,
+  NotesSettings,
+  NotesSidecar,
+  NotesStatus,
   RecordingExtension,
   RecordingMode,
   RecordingResult,
@@ -17,19 +28,30 @@ import type {
   SessionSnapshot,
   SessionStatus,
   ThemePreference,
+  TranscriptionResult,
   UpdateChannel,
   UpdateState,
 } from "./schemas";
 
 export type {
+  AiKeyStatus,
+  AiProvider,
+  AiTestResult,
   AppSettings,
   AppSettingsPatch,
+  BackgroundImageType,
   BubbleSizePreset,
+  CameraBackgroundMode,
+  CameraBackgroundSettings,
   CaptureArea,
   CountdownConfig,
   CountdownResult,
   CountdownSeconds,
   DesktopBubbleSettings,
+  NotesLanguage,
+  NotesSettings,
+  NotesSidecar,
+  NotesStatus,
   RecordingExtension,
   RecordingMode,
   RecordingResult,
@@ -40,6 +62,7 @@ export type {
   SessionSnapshot,
   SessionStatus,
   ThemePreference,
+  TranscriptionResult,
   UpdateChannel,
   UpdateState,
 };
@@ -61,6 +84,7 @@ export const Channels = {
   recordingChunk: "recording:chunk",
   recordingFinish: "recording:finish",
   recordingDiscard: "recording:discard",
+  recordingSaveNotes: "recording:save-notes",
   shellShowInFolder: "shell:show-in-folder",
   shellOpenPath: "shell:open-path",
   shellOpenRecordings: "shell:open-recordings",
@@ -74,6 +98,13 @@ export const Channels = {
   windowSetIgnoreMouse: "window:set-ignore-mouse",
   windowMoveTo: "window:move-to",
   shortcutsGet: "shortcuts:get",
+  shortcutsChanged: "shortcuts:changed",
+  cursorPosition: "cursor:position",
+  notesTranscribe: "notes:transcribe",
+  aiStatus: "ai:status",
+  aiSetKey: "ai:set-key",
+  aiRemoveKey: "ai:remove-key",
+  aiTest: "ai:test",
   panelResize: "panel:resize",
   panelHide: "panel:hide",
   panelVisibility: "panel:visibility",
@@ -84,6 +115,8 @@ export const Channels = {
   updatesCheck: "updates:check",
   updatesInstall: "updates:install",
   updatesChanged: "updates:changed",
+  backgroundChooseImage: "background:choose-image",
+  backgroundGetImage: "background:get-image",
 } as const;
 
 /**
@@ -93,12 +126,20 @@ export const Channels = {
 export const SHORTCUT_CANDIDATES = {
   startStop: ["Alt+Shift+R", "Alt+Shift+K", "CommandOrControl+Alt+R"],
   pauseResume: ["Alt+Shift+P", "CommandOrControl+Alt+P"],
+  /** Held only while recording. */
+  addNote: ["Alt+Shift+N", "CommandOrControl+Alt+N"],
 } as const;
 
 export type ShortcutAction = keyof typeof SHORTCUT_CANDIDATES;
 
 /** The accelerator actually registered per action, or null when every candidate was taken. */
 export type ActiveShortcuts = Record<ShortcutAction, string | null>;
+
+/** The custom camera background image, as bytes (renderers never see its path). */
+export interface BackgroundImage {
+  data: Uint8Array;
+  mimeType: BackgroundImageType;
+}
 
 /** The typed API exposed to renderers as `window.kadr`. */
 export interface KadrApi {
@@ -128,6 +169,8 @@ export interface KadrApi {
     appendChunk(id: string, data: Uint8Array): Promise<void>;
     finish(id: string): Promise<string>;
     discard(id: string): Promise<void>;
+    /** Save the take's notes next to it (call before `finish`; ignored when empty). */
+    saveNotes(id: string, sidecar: NotesSidecar): Promise<void>;
   };
   readonly shell: {
     showInFolder(path: string): Promise<void>;
@@ -157,6 +200,23 @@ export interface KadrApi {
   };
   readonly shortcuts: {
     get(): Promise<ActiveShortcuts>;
+    /** The note shortcut is held only while recording, so this changes. */
+    onChange(listener: (shortcuts: ActiveShortcuts) => void): () => void;
+  };
+  readonly cursor: {
+    /** Recording engine: the pointer's position on the recorded area, or null outside it. */
+    position(): Promise<NormalizedPoint | null>;
+  };
+  readonly notes: {
+    /** Recording engine: transcribe one utterance (16 kHz WAV) with the user's provider. */
+    transcribe(audio: Uint8Array, language: NotesLanguage): Promise<TranscriptionResult>;
+  };
+  readonly ai: {
+    /** Key status (never the key itself). */
+    status(provider: AiProvider): Promise<AiKeyStatus>;
+    setKey(provider: AiProvider, key: string): Promise<AiKeyStatus>;
+    removeKey(provider: AiProvider): Promise<AiKeyStatus>;
+    test(provider: AiProvider): Promise<AiTestResult>;
   };
   readonly panel: {
     /** Fit the control panel window to its content height (CSS pixels). */
@@ -174,6 +234,15 @@ export interface KadrApi {
   };
   readonly app: {
     quit(): void;
+  };
+  readonly background: {
+    /**
+     * Control panel: pick a custom background image. Saves it and switches the bubble to it;
+     * resolves false when the user cancels.
+     */
+    chooseImage(): Promise<boolean>;
+    /** The saved custom background image, or null. */
+    getImage(): Promise<BackgroundImage | null>;
   };
   readonly updates: {
     get(): Promise<UpdateState>;

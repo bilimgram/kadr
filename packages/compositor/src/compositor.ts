@@ -1,7 +1,8 @@
 import type { BubbleLayout } from "@kadr/project-format";
-import { CameraEnhancer } from "./camera-enhancer";
+import { type CameraBackground, type CameraEffects, DEFAULT_CAMERA_BACKGROUND } from "./background";
+import { type CameraFrameSource, CameraPipeline, needsSegmentation } from "./camera-pipeline";
 import { bubbleRect, fitContain, fitCover, type Rect, type Size } from "./layout";
-import { LightMeter, NEUTRAL_TONE, smoothTone, type ToneParams, toneForLuma } from "./light";
+import type { PersonSegmenter } from "./segmentation";
 import { type BubbleShape, getBubbleShape } from "./shapes";
 
 export interface VideoSource extends Size {
@@ -19,10 +20,9 @@ export interface CompositorOptions {
   shadow?: boolean;
   /** Light-correct the camera on the GPU (see light.ts and camera-enhancer.ts). */
   autoLight?: boolean;
+  /** Blur, remove or replace the camera's background (needs `setSegmenter`). */
+  cameraBackground?: CameraBackground;
 }
-
-/** Re-measure camera brightness every N frames (~3 times per second at 30 fps). */
-const LIGHT_SAMPLE_INTERVAL = 10;
 
 type Context2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
@@ -33,12 +33,10 @@ type Context2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 export class Compositor {
   private readonly ctx: Context2D;
   private readonly unitPaths = new Map<string, Path2D>();
-  private lightMeter: LightMeter | null = null;
   /** undefined until first use; null when WebGL2 is unavailable. */
-  private enhancer: CameraEnhancer | null | undefined;
-  private tone: ToneParams = NEUTRAL_TONE;
-  private targetTone: ToneParams = NEUTRAL_TONE;
-  private frameCount = 0;
+  private pipeline: CameraPipeline | null | undefined;
+  private segmenter: PersonSegmenter | null = null;
+  private backgroundImage: ImageBitmap | null = null;
 
   constructor(
     private readonly canvas: HTMLCanvasElement | OffscreenCanvas,
@@ -47,6 +45,18 @@ export class Compositor {
     const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
     if (!ctx) throw new Error("Canvas 2D context is not available");
     this.ctx = ctx as Context2D;
+  }
+
+  /** The person segmenter for background effects and face metering (not owned). */
+  setSegmenter(segmenter: PersonSegmenter | null): void {
+    this.segmenter = segmenter;
+    this.pipeline?.setSegmenter(segmenter);
+  }
+
+  /** The image for the "image" camera background (not owned). */
+  setBackgroundImage(image: ImageBitmap | null): void {
+    this.backgroundImage = image;
+    this.pipeline?.setBackgroundImage(image);
   }
 
   render(frame: CompositorFrame): void {
@@ -69,9 +79,17 @@ export class Compositor {
     const { ctx } = this;
     const rect = bubbleRect(layout, frame);
     const path = this.shapePath(getBubbleShape(layout.shape), rect);
+    const effects: CameraEffects = {
+      touchUp: this.options.autoLight ?? false,
+      background: this.options.cameraBackground ?? DEFAULT_CAMERA_BACKGROUND,
+      mirror: layout.mirror,
+    };
+    const processed = this.processCamera(camera, rect, effects);
+    // With the background removed, the screen shows around the person: no shape, shadow or ring.
+    const cutOut = processed !== null && effects.background.mode === "remove";
 
     ctx.save();
-    if (this.options.shadow ?? true) {
+    if ((this.options.shadow ?? true) && !cutOut) {
       ctx.shadowColor = "rgba(0, 0, 0, 0.35)";
       ctx.shadowBlur = rect.height * 0.06;
       ctx.fillStyle = "#000000";
@@ -79,12 +97,11 @@ export class Compositor {
       ctx.shadowColor = "transparent";
     }
     ctx.clip(path);
-    const enhanced = this.options.autoLight ? this.enhance(camera, rect, layout.mirror) : null;
-    if (enhanced) {
-      // Already cropped, mirrored and light-corrected on the GPU.
-      ctx.drawImage(enhanced, rect.x, rect.y, rect.width, rect.height);
+    if (processed) {
+      // Already cropped, mirrored and processed on the GPU.
+      ctx.drawImage(processed, rect.x, rect.y, rect.width, rect.height);
       ctx.restore();
-      this.strokeBorder(path, layout);
+      if (!cutOut) this.strokeBorder(path, layout);
       return;
     }
     if (layout.mirror) {
@@ -118,31 +135,31 @@ export class Compositor {
     ctx.restore();
   }
 
-  /** Renders the light-corrected camera at the bubble's size, or null to draw it unprocessed. */
-  private enhance(camera: VideoSource, rect: Rect, mirror: boolean): CanvasImageSource | null {
-    if (this.enhancer === undefined) {
+  /** Renders the processed camera at the bubble's size, or null to draw it unprocessed. */
+  private processCamera(
+    camera: VideoSource,
+    rect: Rect,
+    effects: CameraEffects,
+  ): CanvasImageSource | null {
+    if (!needsSegmentation(effects) || camera.width === 0) return null;
+    if (this.pipeline === undefined) {
       const canvas =
         typeof OffscreenCanvas !== "undefined"
           ? new OffscreenCanvas(1, 1)
           : document.createElement("canvas");
-      this.enhancer = CameraEnhancer.create(canvas);
+      this.pipeline = CameraPipeline.create(canvas);
+      this.pipeline?.setSegmenter(this.segmenter);
+      this.pipeline?.setBackgroundImage(this.backgroundImage);
     }
-    const enhancer = this.enhancer;
-    if (!enhancer?.ready || camera.width === 0) return null;
+    const pipeline = this.pipeline;
+    if (!pipeline?.ready) return null;
 
     const width = Math.max(1, Math.round(rect.width));
     const height = Math.max(1, Math.round(rect.height));
-    if (enhancer.canvas.width !== width) enhancer.canvas.width = width;
-    if (enhancer.canvas.height !== height) enhancer.canvas.height = height;
-
-    if (this.frameCount++ % LIGHT_SAMPLE_INTERVAL === 0) {
-      this.lightMeter ??= new LightMeter();
-      const luma = this.lightMeter.measure(camera.image);
-      if (luma !== null) this.targetTone = toneForLuma(luma);
-    }
-    this.tone = smoothTone(this.tone, this.targetTone, 0.12);
-    enhancer.render(camera.image as TexImageSource, camera, { ...this.tone, mirror });
-    return enhancer.canvas;
+    if (pipeline.canvas.width !== width) pipeline.canvas.width = width;
+    if (pipeline.canvas.height !== height) pipeline.canvas.height = height;
+    pipeline.render(camera.image as CameraFrameSource, camera, effects, performance.now());
+    return pipeline.canvas;
   }
 
   private shapePath(shape: BubbleShape, rect: Rect): Path2D {

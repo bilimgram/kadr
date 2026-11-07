@@ -33,6 +33,7 @@ const api: KadrApi = {
     appendChunk: (id, data) => ipcRenderer.invoke(Channels.recordingChunk, id, data),
     finish: (id) => ipcRenderer.invoke(Channels.recordingFinish, id),
     discard: (id) => ipcRenderer.invoke(Channels.recordingDiscard, id),
+    saveNotes: (id, sidecar) => ipcRenderer.invoke(Channels.recordingSaveNotes, id, sidecar),
   },
   shell: {
     showInFolder: (path) => ipcRenderer.invoke(Channels.shellShowInFolder, path),
@@ -54,6 +55,19 @@ const api: KadrApi = {
   },
   shortcuts: {
     get: () => ipcRenderer.invoke(Channels.shortcutsGet),
+    onChange: (listener) => subscribe(Channels.shortcutsChanged, listener),
+  },
+  cursor: {
+    position: () => ipcRenderer.invoke(Channels.cursorPosition),
+  },
+  notes: {
+    transcribe: (audio, language) => ipcRenderer.invoke(Channels.notesTranscribe, audio, language),
+  },
+  ai: {
+    status: (provider) => ipcRenderer.invoke(Channels.aiStatus, provider),
+    setKey: (provider, key) => ipcRenderer.invoke(Channels.aiSetKey, provider, key),
+    removeKey: (provider) => ipcRenderer.invoke(Channels.aiRemoveKey, provider),
+    test: (provider) => ipcRenderer.invoke(Channels.aiTest, provider),
   },
   panel: {
     resize: (height) => ipcRenderer.send(Channels.panelResize, height),
@@ -66,6 +80,10 @@ const api: KadrApi = {
   },
   app: {
     quit: () => ipcRenderer.send(Channels.appQuit),
+  },
+  background: {
+    chooseImage: () => ipcRenderer.invoke(Channels.backgroundChooseImage),
+    getImage: () => ipcRenderer.invoke(Channels.backgroundGetImage),
   },
   updates: {
     get: () => ipcRenderer.invoke(Channels.updatesGet),

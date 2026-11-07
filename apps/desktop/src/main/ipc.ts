@@ -7,13 +7,18 @@ import {
   shell,
 } from "electron";
 import { z } from "zod";
-import { type ActiveShortcuts, Channels } from "../shared/api";
+import { Channels } from "../shared/api";
 import { isTrustedOrigin } from "../shared/origin";
 import {
+  AiProvider,
+  ApiKey,
   AppSettingsPatch,
+  AudioClip,
   CountdownConfig,
   CountdownResult,
   FilePath,
+  NotesLanguage,
+  NotesSidecar,
   PanelHeight,
   RecordingChunk,
   RecordingExtension,
@@ -23,10 +28,14 @@ import {
   SessionCommand,
   SessionSnapshot,
 } from "../shared/schemas";
+import type { KeyStore } from "./ai/keys";
+import { ProviderError, testOpenAiKey, transcribeWithOpenAi } from "./ai/openai";
+import type { BackgroundImageStore } from "./background-image";
 import { copyFileToClipboard } from "./clipboard";
 import type { RecordingStore } from "./recordings";
 import type { SessionCoordinator } from "./session";
 import type { SettingsStore } from "./settings-store";
+import type { ShortcutRegistry } from "./shortcuts";
 import type { UpdateService } from "./updater";
 import type { WindowManager } from "./windows";
 
@@ -36,14 +45,26 @@ interface IpcDependencies {
   settings: SettingsStore;
   session: SessionCoordinator;
   windows: WindowManager;
-  shortcuts: ActiveShortcuts;
+  shortcuts: ShortcutRegistry;
   updates: UpdateService;
+  backgroundImage: BackgroundImageStore;
+  keys: KeyStore;
 }
 
 type Parsed<Schemas extends readonly z.ZodType[]> = { [K in keyof Schemas]: z.infer<Schemas[K]> };
 
 export function registerIpc(deps: IpcDependencies): void {
-  const { devServerUrl, recordings, settings, session, windows, shortcuts, updates } = deps;
+  const {
+    devServerUrl,
+    recordings,
+    settings,
+    session,
+    windows,
+    shortcuts,
+    updates,
+    backgroundImage,
+    keys,
+  } = deps;
 
   const validate = <const Schemas extends readonly z.ZodType[]>(
     channel: string,
@@ -92,10 +113,24 @@ export function registerIpc(deps: IpcDependencies): void {
     windows.regionPickerDisplayId(senderWindow(event)) !== null;
 
   // Settings and shortcuts
-  handle(Channels.shortcutsGet, [], () => shortcuts);
+  handle(Channels.shortcutsGet, [], () => shortcuts.get());
   handle(Channels.bubbleVisibilityGet, [], () => windows.isBubbleVisible());
   handle(Channels.settingsGet, [], () => settings.get());
   handle(Channels.settingsUpdate, [AppSettingsPatch], (_event, patch) => settings.update(patch));
+
+  // Camera background image: chosen in the control panel, read by the bubble and the engine.
+  handle(Channels.backgroundChooseImage, [], async (event) => {
+    if (!isControlWindow(event)) throw new Error("Only the control panel can choose an image");
+    const chosen = await backgroundImage.choose(windows.control);
+    if (chosen) {
+      const { background } = settings.get().bubble;
+      settings.update({
+        bubble: { background: { ...background, mode: "image", imageRevision: Date.now() } },
+      });
+    }
+    return chosen;
+  });
+  handle(Channels.backgroundGetImage, [], () => backgroundImage.read());
 
   // Updates
   handle(Channels.updatesGet, [], () => updates.getState());
@@ -138,6 +173,42 @@ export function registerIpc(deps: IpcDependencies): void {
   });
   handle(Channels.recordingFinish, [RecordingId], (_event, id) => recordings.finish(id));
   handle(Channels.recordingDiscard, [RecordingId], (_event, id) => recordings.discard(id));
+  handle(Channels.recordingSaveNotes, [RecordingId, NotesSidecar], (event, id, sidecar) => {
+    if (!isControlWindow(event)) throw new Error("Only the recording engine can save notes");
+    return recordings.saveNotes(id, sidecar);
+  });
+
+  // Notes: the pointer position and speech-to-text, for the recording engine only.
+  handle(Channels.cursorPosition, [], (event) => {
+    if (!isControlWindow(event)) throw new Error("Only the recording engine can read the pointer");
+    return session.cursorPosition();
+  });
+  handle(Channels.notesTranscribe, [AudioClip, NotesLanguage], async (event, audio, language) => {
+    if (!isControlWindow(event)) throw new Error("Only the recording engine can transcribe");
+    const key = keys.get("openai");
+    if (!key) throw new ProviderError("auth", "Add your OpenAI key in Notes settings.");
+    const bytes =
+      audio instanceof ArrayBuffer
+        ? new Uint8Array(audio)
+        : new Uint8Array(audio.buffer, audio.byteOffset, audio.byteLength);
+    return transcribeWithOpenAi(key, bytes, language);
+  });
+
+  // AI keys: set, test and remove from the control panel; never readable by any renderer.
+  handle(Channels.aiStatus, [AiProvider], (_event, provider) => keys.status(provider));
+  handle(Channels.aiSetKey, [AiProvider, ApiKey], (event, provider, key) => {
+    if (!isControlWindow(event)) throw new Error("Only the control panel can change keys");
+    return keys.set(provider, key);
+  });
+  handle(Channels.aiRemoveKey, [AiProvider], (event, provider) => {
+    if (!isControlWindow(event)) throw new Error("Only the control panel can change keys");
+    return keys.remove(provider);
+  });
+  handle(Channels.aiTest, [AiProvider], async (event, provider) => {
+    if (!isControlWindow(event)) throw new Error("Only the control panel can test keys");
+    const key = keys.get(provider);
+    return key ? testOpenAiKey(key) : { ok: false, message: "No key saved yet." };
+  });
 
   // Shell — restricted to the recordings folder.
   const assertRecordingPath = (path: string) => {

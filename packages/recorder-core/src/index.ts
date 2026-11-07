@@ -1,3 +1,4 @@
+export * from "./audio";
 export * from "./clock";
 export * from "./event-log";
 export * from "./media";

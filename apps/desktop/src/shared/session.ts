@@ -8,6 +8,7 @@ export const IDLE_SNAPSHOT: SessionSnapshot = {
   microphone: "unavailable",
   lastResult: null,
   error: null,
+  notes: { count: 0, listening: "off", lastText: null, message: null },
 };
 
 /** Statuses during which a take exists and the floating toolbar is shown. */

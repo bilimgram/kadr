@@ -321,6 +321,31 @@
   color: var(--k-text-subtle);
 }
 
+.k-input {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: var(--k-radius);
+  border: 1px solid var(--k-border);
+  background: var(--k-surface-2);
+  color: var(--k-text);
+  font: inherit;
+  font-size: var(--k-text-md);
+}
+
+.k-input:hover:not(:disabled) {
+  border-color: var(--k-border-strong);
+}
+
+.k-input:focus-visible {
+  outline: 2px solid var(--k-focus);
+  outline-offset: 1px;
+}
+
+.k-input::placeholder {
+  color: var(--k-text-subtle);
+}
+
 .k-select {
   position: relative;
   display: flex;
@@ -525,6 +550,60 @@
 .k-shape-picker__option:has(input:focus-visible) {
   outline: 2px solid var(--k-focus);
   outline-offset: 2px;
+}
+
+/* ---------- Background picker ---------- */
+
+.k-background-picker {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.k-background-picker__option {
+  display: grid;
+  place-items: center;
+  height: 40px;
+  border-radius: var(--k-radius);
+  border: 1px solid var(--k-border);
+  background: var(--k-surface-2);
+  background-size: cover;
+  background-position: center;
+  color: var(--k-text-subtle);
+  cursor: pointer;
+  transition:
+    border-color var(--k-duration) var(--k-ease),
+    color var(--k-duration) var(--k-ease),
+    box-shadow var(--k-duration) var(--k-ease);
+}
+
+.k-background-picker__option:hover {
+  color: var(--k-text);
+  border-color: var(--k-border-strong);
+}
+
+.k-background-picker__option:has(input:checked) {
+  border-color: var(--k-accent);
+  color: var(--k-text);
+  box-shadow: inset 0 0 0 1px var(--k-accent);
+}
+
+.k-background-picker__option:not(.k-background-picker__option--swatch):has(input:checked) {
+  background-color: var(--k-accent-soft);
+}
+
+.k-background-picker__option:has(input:focus-visible) {
+  outline: 2px solid var(--k-focus);
+  outline-offset: 2px;
+}
+
+.k-background-picker__option--disabled {
+  cursor: default;
+  opacity: 0.6;
 }
 
 /* ---------- Alert ---------- */

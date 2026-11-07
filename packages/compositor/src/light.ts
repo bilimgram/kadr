@@ -2,13 +2,18 @@
  * Camera light correction ("touch-up"). Webcams in typical indoor light underexpose faces, often
  * because a bright window or wall behind the person dominates the camera's own metering.
  *
- * 1. Meter the face, not the frame (`faceLuma`): skin-coloured pixels around where a face usually
- *    sits in a webcam frame, so a bright window or wall behind the person never counts.
+ * 1. Meter the face, not the frame (`faceLuma`): skin-coloured pixels on the person, around the
+ *    face found in the person mask (mask.ts) or, without one, where a face usually sits in a webcam
+ *    frame. A bright window or a beige wall behind the person never counts.
  * 2. Pick a tone curve that maps that luminance onto a comfortable target (`toneForLuma`): a
- *    luminance gamma lifts shadows and midtones a lot and highlights barely, so nothing clips.
- *    Touch-up always adds a gentle lift and skin smoothing, like the "glow" of Loom-style touch-ups.
- * 3. Render it on the GPU (`CameraEnhancer`) with edge-preserving smoothing (which also hides the
- *    sensor noise that lifting shadows reveals) and a saturation/warmth touch so skin isn't grey.
+ *    luminance gamma lifts shadows and midtones a lot and highlights barely, so nothing clips, and
+ *    a gentle S-curve gives back the contrast that lifting takes away. Touch-up always adds a light
+ *    lift and skin smoothing.
+ * 3. Correct colour casts from warm bulbs or blue daylight (`whiteBalanceGains`), measured on
+ *    near-neutral surfaces so skin tone itself never drives it.
+ * 4. Render it on the GPU (`CameraEnhancer`): edge-preserving smoothing (which also hides the sensor
+ *    noise that lifting reveals), and with a person mask the person gets the full lift while the
+ *    background gets only part of it, which separates the speaker from the room like a key light.
  *
  * The desktop bubble and the web compositor use the same code, so preview and recording match.
  */
@@ -29,9 +34,17 @@ export interface ToneParams {
   denoise: number;
   /** Warm shift for skin tones, 0..1. */
   warmth: number;
+  /** S-curve strength after lifting: 1 is none; ~1.1 restores the punch a strong lift flattens. */
+  contrast: number;
 }
 
-export const NEUTRAL_TONE: ToneParams = { gamma: 1, saturation: 1, denoise: 0, warmth: 0 };
+export const NEUTRAL_TONE: ToneParams = {
+  gamma: 1,
+  saturation: 1,
+  denoise: 0,
+  warmth: 0,
+  contrast: 1,
+};
 
 /** Tone curve that brings the metered face luminance up to the target. Never darkens. */
 export function toneForLuma(meteredLuma: number, target = TARGET_FACE_LUMA): ToneParams {
@@ -44,6 +57,7 @@ export function toneForLuma(meteredLuma: number, target = TARGET_FACE_LUMA): Ton
     saturation: 1.05 + 0.13 * lift,
     denoise: 0.35 + 0.4 * lift,
     warmth: 0.25 + 0.45 * lift,
+    contrast: 1.03 + 0.09 * lift,
   };
 }
 
@@ -55,6 +69,7 @@ export function smoothTone(current: ToneParams, target: ToneParams, amount = 0.2
     saturation: ease(current.saturation, target.saturation),
     denoise: ease(current.denoise, target.denoise),
     warmth: ease(current.warmth, target.warmth),
+    contrast: ease(current.contrast, target.contrast),
   };
 }
 
@@ -117,13 +132,15 @@ function weightedQuantile(samples: Array<[number, number]>, quantile: number): n
  * Face luminance (0..1) of RGBA pixel data: a Gaussian weight around `face` (sigma = half the
  * box), counting only skin-coloured pixels when enough are visible and falling back to all pixels
  * near the face otherwise. A low quantile instead of the mean keeps a bright window, lamp or wall
- * beside the face from pulling the reading up.
+ * beside the face from pulling the reading up. `person` (one value per pixel, 0..255, e.g. from
+ * `sampleMaskGrid`) restricts metering to the person.
  */
 export function faceLuma(
   rgba: Uint8ClampedArray,
   width: number,
   height: number,
   face: FaceRegion = DEFAULT_FACE_REGION,
+  person?: Uint8Array,
 ): number {
   const centerX = face.x + face.width / 2;
   const centerY = face.y + face.height / 2;
@@ -138,6 +155,7 @@ export function faceLuma(
     const dy = ((y + 0.5) / height - centerY) / sigmaY;
     for (let x = 0; x < width; x++) {
       const dx = ((x + 0.5) / width - centerX) / sigmaX;
+      if (person && (person[y * width + x] ?? 0) < 128) continue;
       const weight = Math.exp(-(dx * dx + dy * dy) / 2);
       if (weight < 0.01) continue;
       const i = (y * width + x) * 4;
@@ -159,13 +177,78 @@ export function faceLuma(
   return weightedQuantile(samples, FACE_QUANTILE) / 255;
 }
 
+/** Per-channel gains that neutralize a colour cast, normalized to keep brightness. */
+export type RgbGains = [number, number, number];
+
+export const NEUTRAL_GAINS: RgbGains = [1, 1, 1];
+
+/** How far gains may move from 1: enough for warm bulbs, never enough to turn skin grey. */
+const GAIN_LIMITS = { min: 0.86, max: 1.18 };
+/** Below this share of near-neutral pixels there is nothing reliable to balance on. */
+const MIN_NEUTRAL_SHARE = 0.05;
+
+/**
+ * White-balance gains from near-neutral pixels (walls, ceilings, shirts): their average should be
+ * grey, so their tint is the light's tint. Skin is too saturated to qualify, so it never drives the
+ * correction, whatever the skin tone. `strength` applies part of the correction, because webcams
+ * already balance and a fully corrected warm room looks clinical.
+ */
+export function whiteBalanceGains(rgba: Uint8ClampedArray, strength = 0.6): RgbGains {
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  let neutral = 0;
+  let usable = 0;
+  for (let i = 0; i < rgba.length; i += 4) {
+    const red = rgba[i] ?? 0;
+    const green = rgba[i + 1] ?? 0;
+    const blue = rgba[i + 2] ?? 0;
+    const luma = luma709(red, green, blue);
+    if (luma < 30 || luma > 235) continue;
+    usable++;
+    const max = Math.max(red, green, blue);
+    const min = Math.min(red, green, blue);
+    if (max === 0 || (max - min) / max > 0.3) continue;
+    r += red;
+    g += green;
+    b += blue;
+    neutral++;
+  }
+  if (neutral < 20 || neutral < usable * MIN_NEUTRAL_SHARE || r === 0 || g === 0 || b === 0) {
+    return [...NEUTRAL_GAINS];
+  }
+  const grey = (r + g + b) / 3;
+  const limit = (gain: number) =>
+    Math.min(GAIN_LIMITS.max, Math.max(GAIN_LIMITS.min, 1 + (gain - 1) * strength));
+  const gains: RgbGains = [limit(grey / r), limit(grey / g), limit(grey / b)];
+  // Keep luminance unchanged; the tone curve owns brightness.
+  const luma = 0.2126 * gains[0] + 0.7152 * gains[1] + 0.0722 * gains[2];
+  return [gains[0] / luma, gains[1] / luma, gains[2] / luma];
+}
+
+/** Eases white-balance gains so the camera's own white balance never makes colours jump. */
+export function smoothGains(current: RgbGains, target: RgbGains, amount = 0.15): RgbGains {
+  return [
+    current[0] + (target[0] - current[0]) * amount,
+    current[1] + (target[1] - current[1]) * amount,
+    current[2] + (target[2] - current[2]) * amount,
+  ];
+}
+
+/** One light measurement of a camera frame. */
+export interface LightReading {
+  /** Face luminance, 0..1. */
+  luma: number;
+  whiteBalance: RgbGains;
+}
+
 type SampleContext = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
-/** Samples a camera frame at low resolution and meters the face. Cheap enough to run several times a second. */
+/** Samples a camera frame at low resolution and meters it. Cheap enough to run several times a second. */
 export class LightMeter {
   private readonly context: SampleContext | null;
-  private readonly width = 48;
-  private readonly height = 27;
+  readonly width = 64;
+  readonly height = 36;
 
   constructor() {
     const canvas =
@@ -178,13 +261,24 @@ export class LightMeter {
     this.context = canvas.getContext("2d", { willReadFrequently: true }) as SampleContext | null;
   }
 
-  /** Face luminance of the frame, or null if the source isn't ready yet. */
-  measure(source: CanvasImageSource): number | null {
+  /**
+   * Meters the frame, or returns null if the source isn't ready yet. `face` (e.g. from
+   * `estimateFaceRegion`) says where to meter, and `person` (a mask already sampled onto this
+   * meter's grid with `sampleMaskGrid`) limits metering to the person.
+   */
+  measure(
+    source: CanvasImageSource,
+    face: FaceRegion = DEFAULT_FACE_REGION,
+    person?: Uint8Array,
+  ): LightReading | null {
     if (!this.context) return null;
     try {
       this.context.drawImage(source, 0, 0, this.width, this.height);
       const { data } = this.context.getImageData(0, 0, this.width, this.height);
-      return faceLuma(data, this.width, this.height);
+      return {
+        luma: faceLuma(data, this.width, this.height, face, person),
+        whiteBalance: whiteBalanceGains(data),
+      };
     } catch {
       return null;
     }

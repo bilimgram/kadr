@@ -31,7 +31,7 @@ const KEEP_ON_TOP_INTERVAL_MS = 1500;
 /** Control panel: 320 px card plus a transparent margin for its shadow. */
 const PANEL_WIDTH = 344;
 const PANEL_MARGIN = 12;
-const TOOLBAR_SIZE = { width: 280, height: 440 } as const;
+const TOOLBAR_SIZE = { width: 280, height: 500 } as const;
 /** Transparent space above and below the toolbar pill inside its window. */
 const TOOLBAR_PILL_INSET = 46;
 const COUNTDOWN_SIZE = { width: 420, height: 420 } as const;

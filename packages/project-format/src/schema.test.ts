@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { parseEventsJsonl, stringifyEventsJsonl } from "./events";
 import { toJsonSchemas } from "./json-schema";
-import { EditPlan, Manifest, type RecorderEvent } from "./schema";
+import {
+  EditPlan,
+  Manifest,
+  type RecorderEvent,
+  RecorderEvent as RecorderEventSchema,
+  Transcript,
+} from "./schema";
 
 const manifest = {
   formatVersion: 1,
@@ -35,6 +41,12 @@ describe("Manifest", () => {
     expect(Manifest.safeParse({ ...manifest, formatVersion: 2 }).success).toBe(false);
   });
 
+  it("can point at a single-file recording next to the bundle", () => {
+    const parsed = Manifest.parse({ ...manifest, tracks: [], media: { file: "Kadr 1.mp4" } });
+    expect(parsed.media?.file).toBe("Kadr 1.mp4");
+    expect(Manifest.safeParse({ ...manifest, media: { file: "" } }).success).toBe(false);
+  });
+
   it("rejects empty or inverted segments", () => {
     expect(Manifest.safeParse({ ...manifest, segments: [] }).success).toBe(false);
     expect(Manifest.safeParse({ ...manifest, segments: [{ startUs: 10, endUs: 5 }] }).success).toBe(
@@ -49,6 +61,16 @@ describe("events.jsonl", () => {
     { t: 1_000, type: "cursor.move", position: { x: 0.5, y: 0.25 } },
     { t: 2_000, type: "cursor.click", position: { x: 0.5, y: 0.25 }, button: "left" },
     { t: 3_000, type: "marker", kind: "mistake" },
+    {
+      t: 4_000_000,
+      type: "note",
+      id: "note-1",
+      source: "voice",
+      text: "cut the last few seconds, I'm saying it again",
+      speech: { startUs: 4_000_000, endUs: 6_500_000 },
+      position: { x: 0.25, y: 0.75 },
+    },
+    { t: 9_000_000, type: "note", id: "note-2", source: "shortcut" },
   ];
 
   it("round-trips events", () => {
@@ -62,6 +84,27 @@ describe("events.jsonl", () => {
     const parsed = parseEventsJsonl(text);
     expect(parsed.events).toHaveLength(2);
     expect(parsed.issues.map((issue) => issue.line)).toEqual([3, 4]);
+  });
+});
+
+describe("note events", () => {
+  it("require an id and a known source, and a forward speech range", () => {
+    const note = { t: 1, type: "note", id: "n", source: "shortcut" };
+    expect(RecorderEventSchema.safeParse(note).success).toBe(true);
+    expect(RecorderEventSchema.safeParse({ ...note, id: "" }).success).toBe(false);
+    expect(RecorderEventSchema.safeParse({ ...note, source: "telepathy" }).success).toBe(false);
+    expect(
+      RecorderEventSchema.safeParse({ ...note, speech: { startUs: 5, endUs: 2 } }).success,
+    ).toBe(false);
+  });
+});
+
+describe("Transcript", () => {
+  it("records how precise word times are", () => {
+    const transcript = { formatVersion: 1, language: "uz", provider: "openai", words: [] };
+    expect(Transcript.parse(transcript).timing).toBeUndefined();
+    expect(Transcript.parse({ ...transcript, timing: "segment" }).timing).toBe("segment");
+    expect(Transcript.safeParse({ ...transcript, timing: "vibes" }).success).toBe(false);
   });
 });
 
@@ -85,5 +128,8 @@ describe("toJsonSchemas", () => {
     const schemas = toJsonSchemas();
     expect(Object.keys(schemas)).toEqual(["manifest", "event", "transcript", "editPlan"]);
     expect(schemas.manifest).toHaveProperty("properties.tracks");
+    expect(schemas.manifest).toHaveProperty("properties.media");
+    expect(JSON.stringify(schemas.event)).toContain('"note"');
+    expect(schemas.transcript).toHaveProperty("properties.timing");
   });
 });

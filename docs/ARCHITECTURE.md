@@ -80,16 +80,16 @@ flowchart TB
   rec --> native
 ```
 
-| Window            | Properties                                                                                                             | Purpose                                                                                                                     |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Control panel     | Frameless, transparent card near the top-right; closes to the system tray                                              | Source, camera and mic rows with On/Off toggles and a live mic meter; Start; Bubble / Countdown / Audio / More settings ✅  |
-| Bubble            | Transparent, frameless, always-on-top (`screen-saver` level), all workspaces; click-through outside the shape; JS drag | Live camera preview in the chosen shape with automatic light correction; shown while the panel is open or recording ✅      |
-| Recording toolbar | Vertical pill on the left edge, content-protected (excluded from capture), click-through outside the pill              | Stop, timer, pause/resume, restart and discard (with confirmation), mic mute, camera toggle ✅ — draw and mark mistake next |
-| Countdown         | Centered transparent window (over the region, if any), content-protected                                               | 3-2-1 with synthesized tones; Enter starts now, Esc cancels ✅                                                              |
-| Region picker     | One transparent, always-on-top overlay per display, below the bubble                                                   | Draw, move, resize, aspect presets, exact size, keyboard control; remembers the last area ✅ (ADR 0007)                     |
-| Region frame      | Click-through, content-protected window just outside the recorded area                                                 | Marks what is being recorded; red, amber while paused ✅                                                                    |
-| Recording engine  | Lives in the control panel renderer (`backgroundThrottling: false`)                                                    | Capture + encode pipeline; reports state to main, which choreographs the windows                                            |
-| Editor, Settings  | Normal windows                                                                                                         | Editing, preferences, keys                                                                                                  |
+| Window            | Properties                                                                                                             | Purpose                                                                                                                   |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Control panel     | Frameless, transparent card near the top-right; closes to the system tray                                              | Source, camera and mic rows with On/Off toggles and a live mic meter; Start; Bubble / Countdown / Audio / Notes / More ✅ |
+| Bubble            | Transparent, frameless, always-on-top (`screen-saver` level), all workspaces; click-through outside the shape; JS drag | Live camera preview in the chosen shape with light correction and backgrounds (§3.5); shown while the panel is open ✅    |
+| Recording toolbar | Vertical pill on the left edge, content-protected (excluded from capture), click-through outside the pill              | Stop, timer, pause/resume, restart and discard (with confirmation), mic mute, camera toggle, add note (§3.6) ✅           |
+| Countdown         | Centered transparent window (over the region, if any), content-protected                                               | 3-2-1 with synthesized tones; Enter starts now, Esc cancels ✅                                                            |
+| Region picker     | One transparent, always-on-top overlay per display, below the bubble                                                   | Draw, move, resize, aspect presets, exact size, keyboard control; remembers the last area ✅ (ADR 0007)                   |
+| Region frame      | Click-through, content-protected window just outside the recorded area                                                 | Marks what is being recorded; red, amber while paused ✅                                                                  |
+| Recording engine  | Lives in the control panel renderer (`backgroundThrottling: false`)                                                    | Capture + encode pipeline; reports state to main, which choreographs the windows                                          |
+| Editor, Settings  | Normal windows                                                                                                         | Editing, preferences, keys                                                                                                |
 
 ### 3.2 Security baseline (implemented in Phase 0)
 
@@ -148,6 +148,45 @@ pattern (flash + beep) recording.
 
 **Crash safety:** fragmented MP4 is readable up to the last complete fragment; the manifest is
 rewritten atomically (write temp + rename) on every segment boundary.
+
+### 3.5 Camera effects (ADR 0009)
+
+`CameraPipeline` (`@kadr/compositor`) renders every camera frame on the GPU. The desktop bubble,
+camera-only recordings (`control/camera-track.ts`, on the track's own frames) and the web
+compositor all use it, so the preview matches the recording.
+
+- **Person mask:** MediaPipe's selfie segmenter (250 KB, bundled; runtime pinned to a release
+  without usage reporting) runs on the GPU, with a CPU fallback. The mask is smoothed over time,
+  small islands are dropped, and edges are refined against the full-resolution frame in the shader.
+- **Light:** the face is metered where the mask finds it, the person gets the full lift and the room
+  part of it, colour casts are balanced on near-neutral surfaces, and an S-curve restores contrast.
+- **Backgrounds:** none, blur (mask-aware), remove (transparent around the person in the bubble),
+  colour gradient, or a custom image read from the user data folder over IPC.
+
+### 3.6 Notes while recording (ADR 0010)
+
+```mermaid
+flowchart LR
+  subgraph engine[Control panel renderer · recording engine]
+    tap[Mic AudioWorklet<br/>16 kHz] --> vad[SpeechDetector<br/>utterances]
+    vad --> buf[PCM ring buffer]
+    cur[Pointer sampling<br/>cursor:position] --> log[EventLog + RecordingClock]
+    key[Note shortcut / button] --> log
+  end
+  vad -- utterance WAV, only with spoken notes on --> main[Main: notes:transcribe<br/>user's OpenAI key]
+  main -- text --> trig[findSpokenNote<br/>en · uz · ru]
+  trig --> log
+  log -- at stop --> files[name.kadr/ + name notes.md<br/>next to the video]
+```
+
+- Shortcut notes need no network: the moment, the pointer and the next utterance (found from
+  microphone levels) are recorded.
+- Spoken notes transcribe each utterance with the user's key from the main process. A specific
+  trigger phrase ("add a note", "eslatma qo'sh", "добавь заметку") starts a note.
+- At stop, `notesEditPlan` turns retakes and "cut the last N seconds" into proposed cuts. The
+  engine hands everything to `RecordingStore.saveNotes`, which writes the bundle (manifest with a
+  `media` reference to the video, `events.jsonl`, `transcript.json`, `edits/notes.json`) and a
+  readable `notes.md`.
 
 ## 4. Recording bundle (`.kadr`)
 

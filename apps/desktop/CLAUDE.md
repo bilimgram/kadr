@@ -70,3 +70,12 @@ permissions or the protocol, and extend `e2e/smoke.e2e.ts` for new window behavi
   e2e tests poll for it.
 - Files go on the clipboard as a `text/uri-list` `ClipboardItem` (`main/clipboard.ts`); Electron
   writes the platform's file list (CF_HDROP on Windows), which chats and file managers paste.
+- Camera effects (ADR 0009) load MediaPipe from bundled `?url` assets (`renderer/src/camera/effects.ts`)
+  and need `'wasm-unsafe-eval'` in the CSP. `@mediapipe/tasks-vision` is pinned in the catalog:
+  1.x posts usage metrics to Google, and `main/telemetry-guard.test.ts` fails if an upgrade
+  brings that back. Camera-only recordings run the effects on the track in the engine
+  (`control/camera-track.ts`); the other modes capture the bubble.
+- Notes (ADR 0010): `control/notes-recorder.ts` owns the take's clock, event log, pointer sampling
+  and the microphone tap (an AudioWorklet loaded with `?worker&url`). The note shortcut is held
+  only while a session is active (`ShortcutRegistry`). Keys stay in main (`main/ai/keys.ts`);
+  `notes:transcribe` is the only path to a provider, and request bodies are never logged.
