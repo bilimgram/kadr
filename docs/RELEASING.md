@@ -77,6 +77,8 @@ keep it serving. Don't use the rate-limited `r2.dev` development URL for release
    - verifies every installer against the checksums in the metadata,
    - uploads installers first and metadata last, so apps never see metadata for files that
      aren't there yet, and refuses to overwrite a version that is already published,
+   - retries each file on its own (up to 5 tries, waiting 2, 4, 8 and 16 s) when the connection
+     drops, DNS briefly fails, or R2 answers with a server error or throttling,
    - reads the public feed back to confirm it serves the new version,
    - attaches build provenance (Sigstore), writes an SPDX software bill of materials, and publishes
      the GitHub Release with every installer, the update metadata and the SBOM (prerelease for
@@ -100,6 +102,12 @@ corepack pnpm release:desktop                                   # build + publis
 
 Only one OS's metadata is produced per machine (`latest.yml` on Windows, `latest-mac.yml` on
 macOS), so the CI workflow is the normal path.
+
+If a file still fails after its retries, the script stops. When an installer fails, no metadata
+has been uploaded yet, so the feed keeps serving the previous version; when a metadata file fails,
+the installers it points to are already in place, so the feed stays consistent. Either way, run it
+again with `--force` to finish: the files already uploaded are the same, checksum-verified ones,
+and are replaced.
 
 ### Rolling back a bad release
 

@@ -6,7 +6,9 @@
 // Validates every file referenced by the update metadata (version and SHA-512), refuses to
 // overwrite an already-published version unless --force, uploads installers first and the
 // metadata last (so clients never see metadata pointing at files that aren't there yet), then
-// reads the public feed back to confirm. Configuration: docs/RELEASING.md.
+// reads the public feed back to confirm. Each request is retried on its own when the connection
+// drops (retry.mjs), so one hiccup doesn't fail the whole upload. Configuration:
+// docs/RELEASING.md.
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
@@ -14,6 +16,7 @@ import { extname, join, resolve } from "node:path";
 import { HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import YAML from "yaml";
 import { loadReleaseEnv, requireEnv, updateFeedUrl } from "./release-env.mjs";
+import { describeError, UPLOAD_ATTEMPTS, withRetries } from "./retry.mjs";
 
 const args = new Set(process.argv.slice(2));
 const dryRun = args.has("--dry-run");
@@ -116,15 +119,38 @@ const s3 = new S3Client({
   region: env.R2_REGION?.trim() || "auto",
   endpoint,
   forcePathStyle: true,
+  // Retries happen per request in withRetries(); the SDK can't retry streamed uploads anyway.
+  maxAttempts: 1,
+  // Without a logger the SDK prints "non-retryable streaming request" before each of our retries,
+  // which reads like a failure. With one, it logs every failed request (input included) as an
+  // error: those failures reach our code and are reported there, so only other warnings print.
+  logger: {
+    debug() {},
+    info() {},
+    warn(message, ...rest) {
+      if (!String(message).includes("non-retryable streaming request")) {
+        console.warn(message, ...rest);
+      }
+    },
+    error() {},
+  },
   credentials: {
     accessKeyId: requireEnv(env, "R2_ACCESS_KEY"),
     secretAccessKey: requireEnv(env, "R2_SECRET_KEY"),
   },
 });
 
+/** Logs a retry without the error message, which can name the account's endpoint. */
+const logRetry = (name) => (error, attempt, ms) =>
+  console.warn(
+    `  ! ${name}: ${describeError(error)}; retrying in ${ms / 1000} s (attempt ${attempt + 1} of ${UPLOAD_ATTEMPTS})`,
+  );
+
 async function exists(key) {
   try {
-    await s3.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+    await withRetries(() => s3.send(new HeadObjectCommand({ Bucket: bucket, Key: key })), {
+      onRetry: logRetry(key),
+    });
     return true;
   } catch (error) {
     if (error?.$metadata?.httpStatusCode === 404 || error?.name === "NotFound") return false;
@@ -145,25 +171,51 @@ if (!force) {
 for (const item of plan) {
   const { size } = await stat(item.path);
   const extension = item.name.endsWith(".blockmap") ? ".blockmap" : extname(item.name);
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: bucket,
-      Key: `${prefix}/${item.name}`,
-      Body: createReadStream(item.path),
-      ContentLength: size,
-      ContentType: CONTENT_TYPES[extension] ?? "application/octet-stream",
-      CacheControl: item.cacheControl,
-    }),
-  );
+  try {
+    await withRetries(
+      () =>
+        s3.send(
+          new PutObjectCommand({
+            Bucket: bucket,
+            Key: `${prefix}/${item.name}`,
+            // A fresh stream for every attempt: a stream can only be read once.
+            Body: createReadStream(item.path),
+            ContentLength: size,
+            ContentType: CONTENT_TYPES[extension] ?? "application/octet-stream",
+            CacheControl: item.cacheControl,
+          }),
+        ),
+      { onRetry: logRetry(item.name) },
+    );
+  } catch (error) {
+    throw new Error(
+      `Uploading ${item.name} failed (${describeError(error)}). Installers go up before the ` +
+        "update metadata, so apps never see an incomplete release; run again with --force to " +
+        "finish publishing.",
+      { cause: error },
+    );
+  }
   console.log(`  ✓ uploaded ${item.name}`);
 }
 
 // 3. Read the public feed back, exactly as installed apps will.
 for (const name of metadataFiles) {
-  const response = await fetch(`${feedUrl}/${name}?verify=${Date.now()}`, { cache: "no-store" });
-  if (!response.ok)
-    throw new Error(`Public feed check failed for ${name}: HTTP ${response.status}`);
-  const published = YAML.parse(await response.text());
+  const body = await withRetries(
+    async () => {
+      const response = await fetch(`${feedUrl}/${name}?verify=${Date.now()}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        throw Object.assign(
+          new Error(`Public feed check failed for ${name}: HTTP ${response.status}`),
+          { status: response.status },
+        );
+      }
+      return response.text();
+    },
+    { onRetry: logRetry(name) },
+  );
+  const published = YAML.parse(body);
   if (published.version !== version) {
     throw new Error(`Public ${name} reports ${published.version}, expected ${version}.`);
   }
